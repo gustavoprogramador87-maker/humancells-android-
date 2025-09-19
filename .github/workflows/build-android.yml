@@ -7,6 +7,11 @@ on:
     branches: [ main, master ]
   workflow_dispatch:  # Permite executar manualmente
 
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -56,7 +61,7 @@ jobs:
         
     - name: Create Release
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ github.run_number }}
         name: Células 3D v${{ github.run_number }}
@@ -77,5 +82,8 @@ jobs:
         files: android/app/build/outputs/apk/debug/app-debug.apk
         draft: false
         prerelease: false
+        make_latest: true
+        generate_release_notes: true
+        fail_on_unmatched_files: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
