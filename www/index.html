@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Células 3D - Plataforma Educacional</title>
+    
+    <!-- Capacitor -->
+    <script src="https://unpkg.com/@capacitor/core@latest/dist/capacitor.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #00d4ff, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .cells-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .cell-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cell-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 212, 255, 0.3);
+            border-color: #00d4ff;
+        }
+
+        .cell-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .cell-card:hover::before {
+            left: 100%;
+        }
+
+        .cell-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .cell-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00d4ff;
+        }
+
+        .cell-description {
+            font-size: 0.95em;
+            line-height: 1.5;
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+
+        .cell-features {
+            list-style: none;
+            font-size: 0.85em;
+            opacity: 0.8;
+        }
+
+        .cell-features li {
+            margin-bottom: 5px;
+            padding-left: 15px;
+            position: relative;
+        }
+
+        .cell-features li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px;
+            margin-top: 50px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            opacity: 0.7;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .cells-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .cell-card {
+                padding: 20px;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧬 Células 3D</h1>
+        <p>Plataforma Educacional Interativa para Visualização Celular</p>
+    </div>
+
+    <div class="container">
+        <div class="cells-grid">
+            <div class="cell-card" onclick="openCell('lymphocyte_3d_ultra.html')">
+                <div class="status-indicator"></div>
+                <div class="cell-icon">🛡️</div>
+                <div class="cell-title">Linfócito Ultra-Detalhado</div>
+                <div class="cell-description">
+                    Explore a estrutura complexa dos linfócitos com visualização ultra-detalhada dos componentes celulares e processos imunológicos.
+                </div>
+                <ul class="cell-features">
+                    <li>Receptores TCR e CD4</li>
+                    <li>Ativação imunológica</li>
+                    <li>Sinapse imunológica</li>
+                    <li>Otimizado para mobile</li>
+                </ul>
+            </div>
+
+            <div class="cell-card" onclick="openCell('erythrocyte_3d_ultra.html')">
+                <div class="status-indicator"></div>
+                <div class="cell-icon">🔴</div>
+                <div class="cell-title">Eritrócito Ultra-Detalhado</div>
+                <div class="cell-description">
+                    Visualize a estrutura única dos glóbulos vermelhos e seu papel fundamental no transporte de oxigênio.
+                </div>
+                <ul class="cell-features">
+                    <li>Hemoglobina detalhada</li>
+                    <li>Membrana celular</li>
+                    <li>Transporte de gases</li>
+                    <li>Animações fluidas</li>
+                </ul>
+            </div>
+
+            <div class="cell-card" onclick="openCell('adipocyte_3d.html')">
+                <div class="status-indicator"></div>
+                <div class="cell-icon">🟡</div>
+                <div class="cell-title">Adipócito</div>
+                <div class="cell-description">
+                    Descubra a estrutura dos adipócitos e seu papel no armazenamento de energia e metabolismo.
+                </div>
+                <ul class="cell-features">
+                    <li>Gotículas lipídicas</li>
+                    <li>Metabolismo energético</li>
+                    <li>Regulação hormonal</li>
+                    <li>Visualização 3D</li>
+                </ul>
+            </div>
+
+            <div class="cell-card" onclick="openCell('hepatocyte_3d.html')">
+                <div class="status-indicator"></div>
+                <div class="cell-icon">🟤</div>
+                <div class="cell-title">Hepatócito</div>
+                <div class="cell-description">
+                    Explore as células do fígado e suas múltiplas funções metabólicas e de detoxificação.
+                </div>
+                <ul class="cell-features">
+                    <li>Retículo endoplasmático</li>
+                    <li>Peroxissomos</li>
+                    <li>Metabolismo hepático</li>
+                    <li>Detoxificação</li>
+                </ul>
+            </div>
+
+            <div class="cell-card" onclick="openCell('neuron_3d.html')">
+                <div class="status-indicator"></div>
+                <div class="cell-icon">⚡</div>
+                <div class="cell-title">Neurônio</div>
+                <div class="cell-description">
+                    Visualize a estrutura complexa dos neurônios e os processos de transmissão sináptica.
+                </div>
+                <ul class="cell-features">
+                    <li>Dendritos e axônios</li>
+                    <li>Sinapses neurais</li>
+                    <li>Transmissão elétrica</li>
+                    <li>Neurotransmissores</li>
+                </ul>
+            </div>
+
+            <div class="cell-card" onclick="openCell('oocyte_3d_detailed.html')">
+                <div class="status-indicator"></div>
+                <div class="cell-icon">🥚</div>
+                <div class="cell-title">Oócito Detalhado</div>
+                <div class="cell-description">
+                    Explore o desenvolvimento do oócito e os processos de fertilização em modelo ultra-detalhado.
+                </div>
+                <ul class="cell-features">
+                    <li>Zona pelúcida</li>
+                    <li>Processo de fertilização</li>
+                    <li>Cromossomos detalhados</li>
+                    <li>Animações realistas</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>© 2024 Células 3D - Plataforma Educacional | Desenvolvido com ❤️ para educação</p>
+    </div>
+
+    <script>
+        // Função para abrir células
+        function openCell(cellFile) {
+            console.log(`Abrindo célula: ${cellFile}`);
+            
+            // Verificar se Capacitor está disponível
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                // No app nativo, navegar para a página
+                window.location.href = cellFile;
+            } else {
+                // No navegador, abrir em nova aba
+                window.open(cellFile, '_blank');
+            }
+        }
+
+        // Configurações do app
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🧬 Células 3D App iniciado');
+            
+            // Esconder splash screen se estiver no app nativo
+            if (window.Capacitor && window.Capacitor.isNativePlatform() && window.SplashScreen) {
+                try {
+                    await window.SplashScreen.hide();
+                } catch (error) {
+                    console.log('Splash screen não disponível');
+                }
+            }
+
+            // Detectar dispositivo móvel
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                (window.innerWidth <= 768);
+            
+            if (isMobile) {
+                console.log('📱 Modo mobile detectado');
+                document.body.classList.add('mobile-device');
+            }
+        });
+
+        // Tornar função global
+        window.openCell = openCell;
+    </script>
+</body>
+</html>

@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="offline-ready" content="true">
+    <title>Adipócito 3D - Visualização Científica Avançada</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="alternate icon" href="favicon.svg">
+    <link rel="mask-icon" href="favicon.svg" color="#f59e0b">
+    <script src="./libs/three.min.js"></script>
+    <script src="./libs/OrbitControls.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            overflow: hidden;
+            color: white;
+        }
+
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 380px;
+            z-index: 1000;
+        }
+
+        #info-panel h1 {
+            color: #f59e0b;
+            margin-bottom: 10px;
+            font-size: 1.6em;
+        }
+
+        #info-panel p {
+            margin-bottom: 8px;
+            line-height: 1.4;
+            font-size: 0.9em;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .control-group {
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-group h3 {
+            color: #fbbf24;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        button {
+            background: linear-gradient(45deg, #f59e0b, #fbbf24);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            margin: 3px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4);
+        }
+
+        button.active {
+            background: linear-gradient(45deg, #059669, #10b981);
+        }
+
+        .slider-container {
+            margin: 10px 0;
+        }
+
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+            color: #fbbf24;
+            font-size: 0.8em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .stats {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+        }
+
+        .stats h3 {
+            color: #06b6d4;
+            margin-bottom: 10px;
+        }
+
+        .stat-item {
+            margin: 5px 0;
+            font-size: 0.8em;
+        }
+
+        .label {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .metabolic-status {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            color: white;
+        }
+
+        /* Estilos para painéis retráteis */
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .panel-header:hover {
+            transform: translateY(-1px);
+        }
+
+        .panel-toggle-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .panel-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-content {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            transform-origin: top;
+        }
+
+        .panel-content.collapsed {
+            max-height: 0 !important;
+            opacity: 0;
+            transform: scaleY(0);
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Animação de entrada suave */
+        .panel-content:not(.collapsed) {
+            animation: expandPanel 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes expandPanel {
+            from {
+                opacity: 0;
+                transform: scaleY(0.8) translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: scaleY(1) translateY(0);
+            }
+        }
+
+        /* Efeito de hover nos painéis */
+        #info-panel, .stats, .metabolic-status, .research-insights, .controls {
+            transition: all 0.3s ease;
+        }
+
+        #info-panel:hover, .stats:hover, .metabolic-status:hover, .research-insights:hover, .controls:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-minimized {
+            background: rgba(0, 0, 0, 0.9) !important;
+            padding: 8px !important;
+        }
+
+        .panel-minimized .panel-content {
+            display: none;
+        }
+
+        /* Estilos específicos para cada painel */
+        #info-panel.panel-minimized {
+            max-width: 150px;
+        }
+
+        .controls.panel-minimized {
+            min-width: auto;
+            width: 200px;
+        }
+
+        .activity-bar {
+            width: 200px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .activity-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .adipocyte-type-selector {
+            margin: 10px 0;
+        }
+
+        .adipocyte-type-selector select {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 5px;
+            border-radius: 5px;
+            width: 100%;
+        }
+
+        .research-insights {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 320px;
+            z-index: 1000;
+        }
+
+        .research-insights h3 {
+            color: #8b5cf6;
+            margin-bottom: 10px;
+        }
+
+        .insight-item {
+            margin: 8px 0;
+            font-size: 0.8em;
+            padding: 8px;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 5px;
+            border-left: 3px solid #8b5cf6;
+        }
+
+        @media (max-width: 768px) {
+            #info-panel {
+                max-width: 280px;
+                padding: 15px;
+            }
+            
+            .controls {
+                bottom: 10px;
+                left: 10px;
+            }
+            
+            .stats {
+                top: 10px;
+                right: 10px;
+                padding: 10px;
+            }
+            
+            .metabolic-status {
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            .research-insights {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Indicador de modo offline -->
+    <div id="offline-indicator" style="
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: linear-gradient(45deg, #ff6b35, #f7931e);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        z-index: 10000;
+        display: none;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    ">
+        <span style="
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        "></span>
+        <span>Modo Offline</span>
+    </div>
+    
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+    
+    <script>
+        // Mostrar indicador offline
+        function updateOfflineIndicator() {
+            const indicator = document.getElementById('offline-indicator');
+            if (!navigator.onLine) {
+                indicator.style.display = 'flex';
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+        
+        window.addEventListener('online', updateOfflineIndicator);
+        window.addEventListener('offline', updateOfflineIndicator);
+        document.addEventListener('DOMContentLoaded', updateOfflineIndicator);
+    </script>
+    <!-- Botão global para minimizar/expandir todos os painéis -->
+    <div id="global-panel-control" style="
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.9);
+        padding: 8px 16px;
+        border-radius: 25px;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        z-index: 10001;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: white;
+        font-size: 0.9em;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    " onclick="toggleAllPanels()">
+        <span id="global-toggle-icon">📋</span>
+        <span id="global-toggle-text">Minimizar Todos</span>
+    </div>
+
+    <div id="container">
+        <div id="info-panel">
+            <div class="panel-header" onclick="togglePanel('info-panel')">
+                <h1 style="margin: 0; color: #fbbf24;">🟡 Adipócito</h1>
+                <button class="panel-toggle-btn" id="info-panel-toggle">−</button>
+            </div>
+            <div class="panel-content" id="info-panel-content">
+                <p><strong>Função:</strong> Armazenamento de energia e regulação metabólica</p>
+                <p><strong>Tipos:</strong> Branco, Bege, Marrom</p>
+                <p><strong>Tamanho:</strong> 10-200 μm de diâmetro</p>
+                <p><strong>Localização:</strong> Tecido adiposo subcutâneo e visceral</p>
+                <p><strong>Características:</strong> Rica em lipídios, secretora de adipocinas</p>
+            </div>
+        </div>
+
+        <div class="controls" id="controls-panel">
+            <div class="panel-header" onclick="togglePanel('controls-panel')">
+                <h3 style="margin: 0; color: #fbbf24;">🎮 Controles</h3>
+                <button class="panel-toggle-btn" id="controls-panel-toggle">−</button>
+            </div>
+            <div class="panel-content" id="controls-panel-content">
+                <div class="control-group">
+                    <h3>Tipo de Adipócito</h3>
+                    <div class="adipocyte-type-selector">
+                        <select id="adipocyteType" onchange="changeAdipocyteType(this.value)">
+                            <option value="white">Adipócito Branco (WAT)</option>
+                            <option value="beige">Adipócito Bege</option>
+                            <option value="brown">Adipócito Marrom (BAT)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Estruturas Celulares</h3>
+                    <button onclick="toggleLipidDroplet()">Gotícula Lipídica</button>
+                    <button onclick="toggleNucleus()">Núcleo</button>
+                    <button onclick="toggleMitochondria()">Mitocôndrias</button>
+                    <button onclick="toggleER()">Retículo Endoplasmático</button>
+                    <button onclick="toggleGolgi()">Complexo de Golgi</button>
+                    <button onclick="togglePeroxisomes()">Peroxissomos</button>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Funções Metabólicas</h3>
+                    <button onclick="simulateLipolysis()">Lipólise</button>
+                    <button onclick="simulateLipogenesis()">Lipogênese</button>
+                    <button onclick="simulateThermogenesis()">Termogênese</button>
+                    <button onclick="simulateAdipokineSecretion()">Secreção de Adipocinas</button>
+                    <button onclick="simulateBrowning()">Browning</button>
+                </div>
+
+                <div class="slider-container">
+                    <label for="metabolicActivity">Atividade Metabólica:</label>
+                    <input type="range" id="metabolicActivity" min="0" max="100" value="50" onchange="updateMetabolicActivity(this.value)">
+                </div>
+
+                <div class="slider-container">
+                    <label for="lipidContent">Conteúdo Lipídico:</label>
+                    <input type="range" id="lipidContent" min="0" max="100" value="80" onchange="updateLipidContent(this.value)">
+                </div>
+
+                <div class="slider-container">
+                    <label for="insulinSensitivity">Sensibilidade à Insulina:</label>
+                    <input type="range" id="insulinSensitivity" min="0" max="100" value="70" onchange="updateInsulinSensitivity(this.value)">
+                </div>
+            </div>
+        </div>
+
+        <div class="stats" id="stats-panel">
+            <div class="panel-header" onclick="togglePanel('stats-panel')">
+                <h3 style="margin: 0; color: #06b6d4;">📊 Parâmetros Metabólicos</h3>
+                <button class="panel-toggle-btn" id="stats-panel-toggle">−</button>
+            </div>
+            <div class="panel-content" id="stats-panel-content">
+                <div class="stat-item">Tipo: <span id="cellType">Branco</span></div>
+                <div class="stat-item">Volume: <span id="cellVolume">Grande</span></div>
+                <div class="stat-item">Termogênese: <span id="thermogenesis">Baixa</span></div>
+                <div class="stat-item">UCP1: <span id="ucp1Expression">Ausente</span></div>
+                <div class="stat-item">Adipocinas: <span id="adipokines">Leptina, Adiponectina</span></div>
+            </div>
+        </div>
+
+        <div class="metabolic-status" id="metabolic-status-panel">
+            <div class="panel-header" onclick="togglePanel('metabolic-status-panel')">
+                <h3 style="margin: 0; color: #fbbf24;">🔥 Status Metabólico</h3>
+                <button class="panel-toggle-btn" id="metabolic-status-panel-toggle">−</button>
+            </div>
+            <div class="panel-content" id="metabolic-status-panel-content">
+                <div class="activity-bar">
+                    <div class="activity-fill" id="activityFill" style="width: 50%"></div>
+                </div>
+                <div>Atividade: <span id="activityPercentage">50%</span></div>
+                <div>Estado: <span id="metabolicState">Basal</span></div>
+                <div>Lipídios: <span id="lipidStatus">Alto</span></div>
+            </div>
+        </div>
+
+        <div class="research-insights" id="research-insights-panel">
+            <div class="panel-header" onclick="togglePanel('research-insights-panel')">
+                <h3 style="margin: 0; color: #10b981;">🧬 Descobertas Científicas Recentes</h3>
+                <button class="panel-toggle-btn" id="research-insights-panel-toggle">−</button>
+            </div>
+            <div class="panel-content" id="research-insights-panel-content">
+                <div class="insight-item">
+                    <strong>2023:</strong> Identificação de novos marcadores de adipócitos bege e sua regulação por exercício
+                </div>
+                <div class="insight-item">
+                    <strong>2023:</strong> Papel das exosomas de adipócitos na comunicação intercelular
+                </div>
+                <div class="insight-item">
+                    <strong>2024:</strong> Descoberta de microRNAs reguladores da termogênese adaptativa
+                </div>
+                <div class="insight-item">
+                    <strong>2024:</strong> Novos mecanismos de browning do tecido adiposo branco
+                </div>
+                <div class="insight-item">
+                    <strong>2024:</strong> Papel da autofagia na homeostase lipídica dos adipócitos
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let scene, camera, renderer, controls;
+        let adipocyte = {};
+        let animationId;
+        let metabolicActivity = 50;
+        let lipidContent = 80;
+        let insulinSensitivity = 70;
+        let currentType = 'white';
+
+        // Estruturas celulares
+        let structures = [];
+
+        // Sistema de IA para análise de adipócitos
+        class AdipocyteAI {
+            constructor() {
+                this.analysisData = {
+                    type: 'white',
+                    metabolicActivity: 50,
+                    lipidContent: 80,
+                    thermogenicCapacity: 'low'
+                };
+                this.researchInsights = [
+                    "Adipócitos brancos armazenam energia como triglicerídeos em uma única gotícula lipídica",
+                    "Adipócitos marrons geram calor através da proteína UCP1 nas mitocôndrias",
+                    "Adipócitos bege podem ser induzidos por exercício e exposição ao frio",
+                    "A leptina é secretada pelos adipócitos para regular a saciedade",
+                    "A adiponectina melhora a sensibilidade à insulina e tem efeitos anti-inflamatórios"
+                ];
+            }
+
+            analyzeAdipocyte() {
+                const insights = this.researchInsights;
+                return insights[Math.floor(Math.random() * insights.length)];
+            }
+
+            updateAnalysis(type, activity, lipids, insulin) {
+                this.analysisData.type = type;
+                this.analysisData.metabolicActivity = activity;
+                this.analysisData.lipidContent = lipids;
+                this.analysisData.thermogenicCapacity = type === 'brown' ? 'high' : type === 'beige' ? 'moderate' : 'low';
+            }
+        }
+
+        const adipocyteAI = new AdipocyteAI();
+
+        function init() {
+            // Configuração da cena
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a0a);
+
+            // Câmera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 40);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            // Label Renderer removido - dependência externa não disponível
+
+            // Controles
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Iluminação
+            setupLighting();
+
+            // Criar adipócito
+            createAdipocyte();
+
+            // Iniciar animação
+            animate();
+
+            // Eventos
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function setupLighting() {
+            // Luz ambiente
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+            scene.add(ambientLight);
+
+            // Luz direcional principal
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(40, 40, 40);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+
+            // Luzes pontuais coloridas
+            const pointLight1 = new THREE.PointLight(0xf59e0b, 0.6, 80);
+            pointLight1.position.set(25, 25, 25);
+            scene.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0xfbbf24, 0.4, 80);
+            pointLight2.position.set(-25, -25, 25);
+            scene.add(pointLight2);
+
+            const pointLight3 = new THREE.PointLight(0x8b5cf6, 0.3, 80);
+            pointLight3.position.set(0, 40, -25);
+            scene.add(pointLight3);
+        }
+
+        function createAdipocyte() {
+            // Membrana celular
+            createCellMembrane();
+            
+            // Gotícula lipídica principal
+            createLipidDroplet();
+            
+            // Núcleo (periférico)
+            createNucleus();
+            
+            // Mitocôndrias
+            createMitochondria();
+            
+            // Retículo Endoplasmático
+            createEndoplasmicReticulum();
+            
+            // Complexo de Golgi
+            createGolgiComplex();
+            
+            // Peroxissomos
+            createPeroxisomes();
+        }
+
+        function createCellMembrane() {
+            const cellGeometry = new THREE.SphereGeometry(15, 32, 32);
+            const cellMaterial = new THREE.MeshPhongMaterial({
+                color: 0xf59e0b,
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide
+            });
+            adipocyte.membrane = new THREE.Mesh(cellGeometry, cellMaterial);
+            adipocyte.membrane.userData.structureType = 'Membrana Celular';
+            scene.add(adipocyte.membrane);
+            structures.push(adipocyte.membrane);
+            addLabel(adipocyte.membrane, 'Membrana Celular');
+        }
+
+        function createLipidDroplet() {
+            // Gotícula lipídica central (ocupa maior parte da célula)
+            const lipidGeometry = new THREE.SphereGeometry(12, 32, 32);
+            const lipidMaterial = new THREE.MeshPhongMaterial({
+                color: 0xfef3c7,
+                transparent: true,
+                opacity: 0.8,
+                shininess: 100
+            });
+            adipocyte.lipidDroplet = new THREE.Mesh(lipidGeometry, lipidMaterial);
+            adipocyte.lipidDroplet.userData.structureType = 'Gotícula Lipídica';
+            scene.add(adipocyte.lipidDroplet);
+            structures.push(adipocyte.lipidDroplet);
+            addLabel(adipocyte.lipidDroplet, 'Gotícula Lipídica');
+
+            // Gotículas lipídicas menores (para adipócitos marrons/bege)
+            adipocyte.smallLipidDroplets = new THREE.Group();
+            if (currentType === 'brown' || currentType === 'beige') {
+                for (let i = 0; i < 20; i++) {
+                    const smallLipidGeometry = new THREE.SphereGeometry(1 + Math.random() * 2, 16, 16);
+                    const smallLipidMaterial = new THREE.MeshPhongMaterial({
+                        color: 0xfef3c7,
+                        transparent: true,
+                        opacity: 0.7
+                    });
+                    const smallLipid = new THREE.Mesh(smallLipidGeometry, smallLipidMaterial);
+                    
+                    smallLipid.position.set(
+                        (Math.random() - 0.5) * 20,
+                        (Math.random() - 0.5) * 20,
+                        (Math.random() - 0.5) * 20
+                    );
+                    
+                    adipocyte.smallLipidDroplets.add(smallLipid);
+                }
+                scene.add(adipocyte.smallLipidDroplets);
+                structures.push(adipocyte.smallLipidDroplets);
+            }
+        }
+
+        function createNucleus() {
+            // Núcleo periférico (comprimido pela gotícula lipídica)
+            const nucleusGeometry = new THREE.SphereGeometry(2.5, 24, 24);
+            const nucleusMaterial = new THREE.MeshPhongMaterial({
+                color: 0x4a90e2,
+                transparent: true,
+                opacity: 0.8
+            });
+            adipocyte.nucleus = new THREE.Mesh(nucleusGeometry, nucleusMaterial);
+            adipocyte.nucleus.position.set(10, 8, 0);
+            adipocyte.nucleus.scale.set(1, 0.7, 0.8); // Comprimido
+            adipocyte.nucleus.userData.structureType = 'Núcleo';
+            scene.add(adipocyte.nucleus);
+            structures.push(adipocyte.nucleus);
+            addLabel(adipocyte.nucleus, 'Núcleo');
+
+            // Nucléolo
+            const nucleolusGeometry = new THREE.SphereGeometry(0.5, 12, 12);
+            const nucleolusMaterial = new THREE.MeshPhongMaterial({ color: 0x2c5aa0 });
+            const nucleolus = new THREE.Mesh(nucleolusGeometry, nucleolusMaterial);
+            nucleolus.position.set(0.3, 0.3, 0);
+            adipocyte.nucleus.add(nucleolus);
+
+            // Cromatina
+            for (let i = 0; i < 8; i++) {
+                const chromatinGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+                const chromatinMaterial = new THREE.MeshPhongMaterial({ color: 0x1e3a8a });
+                const chromatin = new THREE.Mesh(chromatinGeometry, chromatinMaterial);
+                chromatin.position.set(
+                    (Math.random() - 0.5) * 4,
+                    (Math.random() - 0.5) * 2.8,
+                    (Math.random() - 0.5) * 3.2
+                );
+                adipocyte.nucleus.add(chromatin);
+            }
+        }
+
+        function createMitochondria() {
+            adipocyte.mitochondria = new THREE.Group();
+            
+            // Densidade mitocondrial varia com o tipo de adipócito
+            const mitoCount = currentType === 'brown' ? 300 : currentType === 'beige' ? 150 : 50;
+            const mitoColor = currentType === 'brown' ? 0x8b0000 : currentType === 'beige' ? 0xdc2626 : 0xff6b6b;
+            
+            for (let i = 0; i < mitoCount; i++) {
+                const mitoGeometry = new THREE.CylinderGeometry(0.2, 0.2, 1, 8);
+                const mitoMaterial = new THREE.MeshPhongMaterial({
+                    color: mitoColor,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const mitochondrion = new THREE.Mesh(mitoGeometry, mitoMaterial);
+                
+                // Posicionar ao redor da gotícula lipídica
+                const radius = 13 + Math.random() * 2;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                
+                mitochondrion.position.set(
+                    radius * Math.sin(phi) * Math.cos(theta),
+                    radius * Math.sin(phi) * Math.sin(theta),
+                    radius * Math.cos(phi)
+                );
+                
+                mitochondrion.rotation.set(
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI
+                );
+                
+                adipocyte.mitochondria.add(mitochondrion);
+            }
+            
+            adipocyte.mitochondria.userData.structureType = 'Mitocôndrias';
+            scene.add(adipocyte.mitochondria);
+            structures.push(adipocyte.mitochondria);
+            addLabel(adipocyte.mitochondria, 'Mitocôndrias');
+        }
+
+        function createEndoplasmicReticulum() {
+            adipocyte.er = new THREE.Group();
+            
+            // RE reduzido em adipócitos maduros
+            for (let i = 0; i < 25; i++) {
+                const erGeometry = new THREE.PlaneGeometry(1.2, 0.6);
+                const erMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x4ecdc4,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                const erSegment = new THREE.Mesh(erGeometry, erMaterial);
+                
+                const radius = 13.5 + Math.random() * 1.5;
+                const angle = (i / 25) * Math.PI * 2;
+                erSegment.position.set(
+                    radius * Math.cos(angle),
+                    (Math.random() - 0.5) * 8,
+                    radius * Math.sin(angle)
+                );
+                
+                erSegment.rotation.set(
+                    Math.random() * Math.PI,
+                    angle,
+                    Math.random() * 0.5
+                );
+                
+                adipocyte.er.add(erSegment);
+            }
+            
+            adipocyte.er.userData.structureType = 'Retículo Endoplasmático';
+            scene.add(adipocyte.er);
+            structures.push(adipocyte.er);
+            addLabel(adipocyte.er, 'Retículo Endoplasmático');
+        }
+
+        function createGolgiComplex() {
+            adipocyte.golgi = new THREE.Group();
+            
+            // Complexo de Golgi próximo ao núcleo
+            for (let i = 0; i < 8; i++) {
+                const golgiGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.15, 16);
+                const golgiMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xfeca57,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                const golgiCisterna = new THREE.Mesh(golgiGeometry, golgiMaterial);
+                
+                golgiCisterna.position.set(
+                    8 + i * 0.2,
+                    6 + i * 0.2,
+                    i * 0.2 - 0.8
+                );
+                
+                adipocyte.golgi.add(golgiCisterna);
+            }
+            
+            adipocyte.golgi.userData.structureType = 'Complexo de Golgi';
+            scene.add(adipocyte.golgi);
+            structures.push(adipocyte.golgi);
+            addLabel(adipocyte.golgi, 'Complexo de Golgi');
+        }
+
+        function createPeroxisomes() {
+            adipocyte.peroxisomes = new THREE.Group();
+            
+            // Peroxissomos para metabolismo lipídico
+            for (let i = 0; i < 30; i++) {
+                const peroxisomeGeometry = new THREE.SphereGeometry(0.3, 12, 12);
+                const peroxisomeMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x9b59b6,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const peroxisome = new THREE.Mesh(peroxisomeGeometry, peroxisomeMaterial);
+                
+                const radius = 12 + Math.random() * 3;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                
+                peroxisome.position.set(
+                    radius * Math.sin(phi) * Math.cos(theta),
+                    radius * Math.sin(phi) * Math.sin(theta),
+                    radius * Math.cos(phi)
+                );
+                
+                adipocyte.peroxisomes.add(peroxisome);
+            }
+            
+            adipocyte.peroxisomes.userData.structureType = 'Peroxissomos';
+            scene.add(adipocyte.peroxisomes);
+            structures.push(adipocyte.peroxisomes);
+            addLabel(adipocyte.peroxisomes, 'Peroxissomos');
+        }
+
+        function addLabel(object, text) {
+            // Labels temporariamente desabilitados - dependência CSS2DRenderer removida
+            // console.log('Label:', text, 'para objeto:', object);
+        }
+
+        // Funções de controle
+        function toggleLipidDroplet() {
+            adipocyte.lipidDroplet.visible = !adipocyte.lipidDroplet.visible;
+            if (adipocyte.smallLipidDroplets) {
+                adipocyte.smallLipidDroplets.visible = !adipocyte.smallLipidDroplets.visible;
+            }
+        }
+
+        function toggleNucleus() {
+            adipocyte.nucleus.visible = !adipocyte.nucleus.visible;
+        }
+
+        function toggleMitochondria() {
+            adipocyte.mitochondria.visible = !adipocyte.mitochondria.visible;
+        }
+
+        function toggleER() {
+            adipocyte.er.visible = !adipocyte.er.visible;
+        }
+
+        function toggleGolgi() {
+            adipocyte.golgi.visible = !adipocyte.golgi.visible;
+        }
+
+        function togglePeroxisomes() {
+            adipocyte.peroxisomes.visible = !adipocyte.peroxisomes.visible;
+        }
+
+        function changeAdipocyteType(type) {
+            currentType = type;
+            adipocyteAI.updateAnalysis(type, metabolicActivity, lipidContent, insulinSensitivity);
+            
+            // Atualizar informações
+            const typeNames = {
+                'white': 'Branco',
+                'beige': 'Bege',
+                'brown': 'Marrom'
+            };
+            
+            const volumes = {
+                'white': 'Grande',
+                'beige': 'Médio',
+                'brown': 'Pequeno'
+            };
+            
+            const thermogenesis = {
+                'white': 'Baixa',
+                'beige': 'Moderada',
+                'brown': 'Alta'
+            };
+            
+            const ucp1 = {
+                'white': 'Ausente',
+                'beige': 'Induzível',
+                'brown': 'Constitutiva'
+            };
+            
+            document.getElementById('cellType').textContent = typeNames[type];
+            document.getElementById('cellVolume').textContent = volumes[type];
+            document.getElementById('thermogenesis').textContent = thermogenesis[type];
+            document.getElementById('ucp1Expression').textContent = ucp1[type];
+            
+            // Atualizar cor da membrana
+            const colors = {
+                'white': 0xf59e0b,
+                'beige': 0xfbbf24,
+                'brown': 0x92400e
+            };
+            
+            adipocyte.membrane.material.color.setHex(colors[type]);
+            
+            // Recriar estruturas específicas
+            scene.remove(adipocyte.mitochondria);
+            if (adipocyte.smallLipidDroplets) {
+                scene.remove(adipocyte.smallLipidDroplets);
+            }
+            createMitochondria();
+            createLipidDroplet();
+        }
+
+        // Simulações
+        function simulateLipolysis() {
+            console.log("Simulando lipólise...");
+            
+            // Redução da gotícula lipídica
+            const originalScale = adipocyte.lipidDroplet.scale.clone();
+            const reducedScale = originalScale.clone().multiplyScalar(0.8);
+            
+            const animate = () => {
+                adipocyte.lipidDroplet.scale.lerp(reducedScale, 0.1);
+                if (adipocyte.lipidDroplet.scale.distanceTo(reducedScale) > 0.01) {
+                    requestAnimationFrame(animate);
+                } else {
+                    setTimeout(() => {
+                        adipocyte.lipidDroplet.scale.copy(originalScale);
+                    }, 2000);
+                }
+            };
+            animate();
+            
+            // Ativação de peroxissomos
+            adipocyte.peroxisomes.children.forEach((peroxisome, index) => {
+                setTimeout(() => {
+                    peroxisome.material.emissive.setHex(0x333333);
+                    setTimeout(() => {
+                        peroxisome.material.emissive.setHex(0x000000);
+                    }, 300);
+                }, index * 50);
+            });
+        }
+
+        function simulateLipogenesis() {
+            console.log("Simulando lipogênese...");
+            
+            // Aumento da gotícula lipídica
+            const originalScale = adipocyte.lipidDroplet.scale.clone();
+            const expandedScale = originalScale.clone().multiplyScalar(1.2);
+            
+            const animate = () => {
+                adipocyte.lipidDroplet.scale.lerp(expandedScale, 0.05);
+                if (adipocyte.lipidDroplet.scale.distanceTo(expandedScale) > 0.01) {
+                    requestAnimationFrame(animate);
+                } else {
+                    setTimeout(() => {
+                        adipocyte.lipidDroplet.scale.copy(originalScale);
+                    }, 3000);
+                }
+            };
+            animate();
+            
+            // Ativação do RE
+            adipocyte.er.children.forEach((segment, index) => {
+                setTimeout(() => {
+                    segment.material.emissive.setHex(0x222222);
+                    setTimeout(() => {
+                        segment.material.emissive.setHex(0x000000);
+                    }, 400);
+                }, index * 30);
+            });
+        }
+
+        function simulateThermogenesis() {
+            console.log("Simulando termogênese...");
+            
+            if (currentType === 'white') {
+                alert("Adipócitos brancos têm capacidade termogênica limitada!");
+                return;
+            }
+            
+            // Ativação intensa das mitocôndrias
+            adipocyte.mitochondria.children.forEach((mito, index) => {
+                setTimeout(() => {
+                    mito.material.emissive.setHex(0xff0000);
+                    mito.scale.setScalar(1.3);
+                    setTimeout(() => {
+                        mito.material.emissive.setHex(0x000000);
+                        mito.scale.setScalar(1);
+                    }, 500);
+                }, index * 10);
+            });
+            
+            // Efeito de calor
+            adipocyte.membrane.material.emissive.setHex(0x330000);
+            setTimeout(() => {
+                adipocyte.membrane.material.emissive.setHex(0x000000);
+            }, 2000);
+        }
+
+        function simulateAdipokineSecretion() {
+            console.log("Simulando secreção de adipocinas...");
+            
+            // Criar partículas de adipocinas
+            const adipokines = ['Leptina', 'Adiponectina', 'Resistina', 'Visfatina'];
+            
+            for (let i = 0; i < 30; i++) {
+                const adipokineGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+                const adipokineMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x00ff00,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const adipokine = new THREE.Mesh(adipokineGeometry, adipokineMaterial);
+                
+                adipokine.position.copy(adipocyte.membrane.position);
+                scene.add(adipokine);
+                
+                // Animar movimento para fora da célula
+                const direction = new THREE.Vector3(
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2
+                ).normalize();
+                
+                const animate = () => {
+                    adipokine.position.add(direction.clone().multiplyScalar(0.3));
+                    adipokine.material.opacity -= 0.02;
+                    
+                    if (adipokine.material.opacity > 0) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        scene.remove(adipokine);
+                    }
+                };
+                
+                setTimeout(animate, i * 100);
+            }
+        }
+
+        function simulateBrowning() {
+            console.log("Simulando browning...");
+            
+            if (currentType === 'brown') {
+                alert("Adipócito já é marrom!");
+                return;
+            }
+            
+            // Transformação gradual para bege/marrom
+            const targetColor = currentType === 'white' ? 0xfbbf24 : 0x92400e;
+            
+            const animate = () => {
+                adipocyte.membrane.material.color.lerp(new THREE.Color(targetColor), 0.05);
+                if (adipocyte.membrane.material.color.distanceTo(new THREE.Color(targetColor)) > 0.01) {
+                    requestAnimationFrame(animate);
+                }
+            };
+            animate();
+            
+            // Aumento de mitocôndrias
+            for (let i = 0; i < 50; i++) {
+                const mitoGeometry = new THREE.CapsuleGeometry(0.2, 1, 4, 8);
+                const mitoMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xdc2626,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const newMito = new THREE.Mesh(mitoGeometry, mitoMaterial);
+                
+                const radius = 13 + Math.random() * 2;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                
+                newMito.position.set(
+                    radius * Math.sin(phi) * Math.cos(theta),
+                    radius * Math.sin(phi) * Math.sin(theta),
+                    radius * Math.cos(phi)
+                );
+                
+                adipocyte.mitochondria.add(newMito);
+            }
+        }
+
+        function updateMetabolicActivity(value) {
+            metabolicActivity = value;
+            adipocyteAI.updateAnalysis(currentType, value, lipidContent, insulinSensitivity);
+            
+            // Atualizar indicadores visuais
+            document.getElementById('activityPercentage').textContent = value + '%';
+            document.getElementById('activityFill').style.width = value + '%';
+            
+            const states = ['Basal', 'Ativo', 'Muito Ativo', 'Hiperativo'];
+            const stateIndex = Math.floor(value / 25);
+            document.getElementById('metabolicState').textContent = states[Math.min(stateIndex, 3)];
+            
+            // Atualizar aparência baseada na atividade
+            const intensity = value / 100;
+            adipocyte.membrane.material.emissive.setRGB(intensity * 0.2, intensity * 0.1, 0);
+        }
+
+        function updateLipidContent(value) {
+            lipidContent = value;
+            adipocyteAI.updateAnalysis(currentType, metabolicActivity, value, insulinSensitivity);
+            
+            const status = value > 80 ? 'Alto' : value > 50 ? 'Moderado' : 'Baixo';
+            document.getElementById('lipidStatus').textContent = status;
+            
+            // Atualizar tamanho da gotícula lipídica
+            const scale = 0.5 + (value / 100) * 0.5;
+            adipocyte.lipidDroplet.scale.setScalar(scale);
+        }
+
+        function updateInsulinSensitivity(value) {
+            insulinSensitivity = value;
+            adipocyteAI.updateAnalysis(currentType, metabolicActivity, lipidContent, value);
+            
+            // Atualizar cor baseada na sensibilidade
+            const hue = (value / 100) * 120; // Verde para alta sensibilidade, vermelho para baixa
+            adipocyte.nucleus.material.color.setHSL(hue / 360, 0.8, 0.5);
+        }
+
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+            
+            const time = Date.now() * 0.001;
+            
+            // Rotação suave do adipócito
+            if (adipocyte.membrane) {
+                adipocyte.membrane.rotation.y += 0.003;
+            }
+            
+            // Pulsação da gotícula lipídica
+            if (adipocyte.lipidDroplet) {
+                adipocyte.lipidDroplet.scale.setScalar(1 + Math.sin(time * 2) * 0.02);
+            }
+            
+            // Movimento das mitocôndrias
+            if (adipocyte.mitochondria) {
+                adipocyte.mitochondria.children.forEach((mito, index) => {
+                    mito.rotation.x += 0.01;
+                    mito.position.y += Math.sin(time * 2 + index) * 0.005;
+                });
+            }
+            
+            // Flutuação dos peroxissomos
+            if (adipocyte.peroxisomes) {
+                adipocyte.peroxisomes.children.forEach((peroxisome, index) => {
+                    peroxisome.position.y += Math.sin(time * 3 + index) * 0.003;
+                });
+            }
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Função para comprimir/expandir painéis com animações suaves
+        function togglePanel(panelId) {
+            const panel = document.getElementById(panelId);
+            const content = document.getElementById(panelId + '-content');
+            const toggleBtn = document.getElementById(panelId + '-toggle');
+            
+            if (!panel || !content || !toggleBtn) return;
+            
+            const isCollapsed = content.classList.contains('collapsed');
+            
+            if (isCollapsed) {
+                // Expandir painel
+                content.classList.remove('collapsed');
+                content.style.display = 'block';
+                toggleBtn.textContent = '−';
+                toggleBtn.style.transform = 'rotate(0deg)';
+                
+                // Força o reflow para garantir que a animação funcione
+                content.offsetHeight;
+                
+                // Animação de expansão suave
+                requestAnimationFrame(() => {
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                    content.style.opacity = '1';
+                    content.style.transform = 'scaleY(1) translateY(0)';
+                });
+                
+                // Remove max-height após a animação para permitir conteúdo dinâmico
+                setTimeout(() => {
+                    content.style.maxHeight = 'none';
+                }, 400);
+                
+            } else {
+                // Comprimir painel
+                content.style.maxHeight = content.scrollHeight + 'px';
+                toggleBtn.textContent = '+';
+                toggleBtn.style.transform = 'rotate(180deg)';
+                
+                // Força o reflow
+                content.offsetHeight;
+                
+                // Animação de compressão suave
+                requestAnimationFrame(() => {
+                    content.classList.add('collapsed');
+                });
+                
+                // Esconder completamente após a animação
+                setTimeout(() => {
+                    if (content.classList.contains('collapsed')) {
+                        content.style.display = 'none';
+                    }
+                }, 400);
+            }
+            
+            // Adiciona efeito visual no botão
+            toggleBtn.style.transform += ' scale(0.9)';
+            setTimeout(() => {
+                toggleBtn.style.transform = toggleBtn.style.transform.replace(' scale(0.9)', '');
+            }, 150);
+        }
+
+        // Função para minimizar/expandir todos os painéis
+        function toggleAllPanels() {
+            const panelIds = ['info-panel', 'controls-panel', 'stats-panel', 'metabolic-status-panel', 'research-insights-panel'];
+            const globalIcon = document.getElementById('global-toggle-icon');
+            const globalText = document.getElementById('global-toggle-text');
+            const globalControl = document.getElementById('global-panel-control');
+            
+            // Verifica se a maioria dos painéis está expandida
+            let expandedCount = 0;
+            panelIds.forEach(panelId => {
+                const content = document.getElementById(panelId + '-content');
+                if (content && !content.classList.contains('collapsed')) {
+                    expandedCount++;
+                }
+            });
+            
+            const shouldCollapse = expandedCount > panelIds.length / 2;
+            
+            // Aplica a ação em todos os painéis com delay escalonado para efeito visual
+            panelIds.forEach((panelId, index) => {
+                setTimeout(() => {
+                    const content = document.getElementById(panelId + '-content');
+                    const isCurrentlyCollapsed = content && content.classList.contains('collapsed');
+                    
+                    if ((shouldCollapse && !isCurrentlyCollapsed) || (!shouldCollapse && isCurrentlyCollapsed)) {
+                        togglePanel(panelId);
+                    }
+                }, index * 100); // Delay de 100ms entre cada painel
+            });
+            
+            // Atualiza o botão global
+            if (shouldCollapse) {
+                globalIcon.textContent = '📂';
+                globalText.textContent = 'Expandir Todos';
+                globalControl.style.background = 'rgba(139, 92, 246, 0.9)';
+            } else {
+                globalIcon.textContent = '📋';
+                globalText.textContent = 'Minimizar Todos';
+                globalControl.style.background = 'rgba(0, 0, 0, 0.9)';
+            }
+            
+            // Efeito visual no botão
+            globalControl.style.transform = 'translateX(-50%) scale(0.95)';
+            setTimeout(() => {
+                globalControl.style.transform = 'translateX(-50%) scale(1)';
+            }, 150);
+        }
+
+        // Adiciona efeito hover ao botão global
+        document.addEventListener('DOMContentLoaded', () => {
+            const globalControl = document.getElementById('global-panel-control');
+            if (globalControl) {
+                globalControl.addEventListener('mouseenter', () => {
+                    globalControl.style.transform = 'translateX(-50%) translateY(-2px)';
+                    globalControl.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.4)';
+                });
+                
+                globalControl.addEventListener('mouseleave', () => {
+                    globalControl.style.transform = 'translateX(-50%) translateY(0)';
+                    globalControl.style.boxShadow = 'none';
+                });
+            }
+        });
+
+        // Inicializar quando a página carregar
+        window.addEventListener('load', init);
+    </script>
+
+    <!-- Service Worker para funcionamento offline -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(registration => {
+                        console.log('✅ SW registrado:', registration);
+                    })
+                    .catch(error => {
+                        console.log('⚠️ SW não disponível:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

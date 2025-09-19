@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="offline-ready" content="true">
+    <title>Eritrócito 3D Ultra-Detalhado - Transporte de Gases</title>
+    
+    <!-- Three.js Libraries with CDN fallback -->
+    <script>
+        // Função para carregar scripts com fallback
+        function loadScriptWithFallback(localSrc, cdnSrc, callback) {
+            const script = document.createElement('script');
+            script.src = localSrc;
+            script.onload = callback;
+            script.onerror = function() {
+                console.log('📱 Carregando do CDN:', cdnSrc);
+                const fallbackScript = document.createElement('script');
+                fallbackScript.src = cdnSrc;
+                fallbackScript.onload = callback;
+                fallbackScript.onerror = function() {
+                    console.error('❌ Falha ao carregar:', cdnSrc);
+                };
+                document.head.appendChild(fallbackScript);
+            };
+            document.head.appendChild(script);
+        }
+        
+        // Carregar Three.js
+        loadScriptWithFallback(
+            './libs/three.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+            function() {
+                console.log('✅ Three.js carregado');
+                // Carregar OrbitControls após Three.js
+                loadScriptWithFallback(
+                    './libs/OrbitControls.js',
+                    'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js',
+                    function() {
+                        console.log('✅ OrbitControls carregado');
+                        // Inicializar aplicação
+                        if (typeof initErythrocyte === 'function') {
+                            initErythrocyte();
+                        }
+                    }
+                );
+            }
+        );
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            color: white;
+        }
+        
+        #canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            cursor: grab;
+        }
+        
+        #canvas:active {
+            cursor: grabbing;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 300px;
+            z-index: 1000;
+        }
+        
+        /* Otimizações para Mobile */
+        @media (max-width: 768px) {
+            .controls {
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+                padding: 15px;
+                font-size: 14px;
+                max-height: 40vh;
+                overflow-y: auto;
+                transform: translateY(-100%);
+                transition: transform 0.3s ease;
+            }
+            
+            .controls.mobile-open {
+                transform: translateY(0);
+            }
+            
+            .mobile-toggle {
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                background: rgba(255, 107, 107, 0.9);
+                color: white;
+                border: none;
+                padding: 12px;
+                border-radius: 50%;
+                font-size: 18px;
+                cursor: pointer;
+                z-index: 1001;
+                width: 50px;
+                height: 50px;
+                display: none;
+            }
+            
+            .control-group {
+                margin-bottom: 10px;
+            }
+            
+            .control-group label {
+                font-size: 11px;
+            }
+            
+            .view-mode-btn {
+                padding: 8px 12px !important;
+                font-size: 11px !important;
+                margin: 2px !important;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-toggle {
+                display: block !important;
+            }
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        
+        .control-group input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
+        .value-display {
+            font-size: 11px;
+            color: #4ecdc4;
+            text-align: right;
+        }
+        
+        .view-modes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .view-mode-btn {
+            padding: 5px 10px;
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid #ff6b6b;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .view-mode-btn:hover {
+            background: rgba(255, 107, 107, 0.4);
+        }
+        
+        .view-mode-btn.active {
+            background: #ff6b6b;
+        }
+        
+        .cross-sections {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .cross-section-btn {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 5px;
+            background: rgba(78, 205, 196, 0.2);
+            border: 1px solid #4ecdc4;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s ease;
+        }
+        
+        .cross-section-btn:hover {
+            background: rgba(78, 205, 196, 0.4);
+        }
+        
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 350px;
+        }
+        
+        .info-title {
+            color: #ff6b6b;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .info-text {
+            font-size: 11px;
+            line-height: 1.4;
+            color: #cccccc;
+        }
+        
+        .gas-transport-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .gas-metric {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .gas-metric-label {
+            font-size: 10px;
+            color: #4ecdc4;
+            margin-bottom: 3px;
+        }
+        
+        .gas-metric-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+        }
+    </style>
+<link rel="stylesheet" href="./libs/fonts.css">
+</head>
+<body>
+    <!-- Botão de toggle para mobile -->
+    <button class="mobile-toggle" onclick="toggleMobileControls()">⚙️</button>
+    
+    <!-- Indicador de modo offline -->
+    <div id="offline-indicator" style="
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: linear-gradient(45deg, #ff6b35, #f7931e);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        z-index: 10000;
+        display: none;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    ">
+        <span style="
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        "></span>
+        <span>Modo Offline</span>
+    </div>
+    
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+    
+    <script>
+        // Mostrar indicador offline
+        function updateOfflineIndicator() {
+            const indicator = document.getElementById('offline-indicator');
+            if (!navigator.onLine) {
+                indicator.style.display = 'flex';
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+        
+        window.addEventListener('online', updateOfflineIndicator);
+        window.addEventListener('offline', updateOfflineIndicator);
+        document.addEventListener('DOMContentLoaded', updateOfflineIndicator);
+    </script>
+    <canvas id="canvas"></canvas>
+    
+    <div class="controls">
+        <h3 style="margin-top: 0; color: #ff6b6b;">Simulação de Transporte de Gases</h3>
+        
+        <div class="control-group">
+            <label>Saturação de Oxigênio (%)</label>
+            <input type="range" id="oxygenSaturation" min="70" max="100" value="97" step="0.1">
+            <div class="value-display" id="oxygenValue">97.0%</div>
+        </div>
+        
+        <div class="control-group">
+            <label>CO₂ (mmHg)</label>
+            <input type="range" id="carbonDioxide" min="35" max="50" value="40" step="0.1">
+            <div class="value-display" id="co2Value">40.0 mmHg</div>
+        </div>
+        
+        <div class="control-group">
+            <label>pH Sanguíneo</label>
+            <input type="range" id="bloodPH" min="7.0" max="7.8" value="7.4" step="0.01">
+            <div class="value-display" id="pHValue">7.40</div>
+        </div>
+        
+        <div class="control-group">
+            <label>Hemoglobina (g/dL)</label>
+            <input type="range" id="hemoglobin" min="8" max="18" value="14" step="0.1">
+            <div class="value-display" id="hbValue">14.0 g/dL</div>
+        </div>
+        
+        <div class="control-group">
+            <label>Opacidade</label>
+            <input type="range" id="opacity" min="0.1" max="1.0" value="0.8" step="0.1">
+            <div class="value-display" id="opacityValue">0.8</div>
+        </div>
+        
+        <div class="control-group">
+            <input type="checkbox" id="showMembrane" checked>
+            <label for="showMembrane" style="display: inline;">Membrana Celular</label>
+        </div>
+        
+        <div class="control-group">
+            <input type="checkbox" id="showHemoglobin" checked>
+            <label for="showHemoglobin" style="display: inline;">Hemoglobina</label>
+        </div>
+        
+        <div class="control-group">
+            <input type="checkbox" id="showSpectrin" checked>
+            <label for="showSpectrin" style="display: inline;">Rede de Espectrina</label>
+        </div>
+        
+        <div class="control-group">
+            <input type="checkbox" id="showAnkyrin">
+            <label for="showAnkyrin" style="display: inline;">Complexo Anquirina</label>
+        </div>
+        
+        <div class="control-group">
+            <input type="checkbox" id="showBand3">
+            <label for="showBand3" style="display: inline;">Proteína Banda 3</label>
+        </div>
+        
+        <div class="control-group">
+            <input type="checkbox" id="showMolecularFlow">
+            <label for="showMolecularFlow" style="display: inline;">Fluxo Molecular</label>
+        </div>
+        
+        <div class="control-group">
+            <input type="checkbox" id="showGasExchange">
+            <label for="showGasExchange" style="display: inline;">Troca Gasosa</label>
+        </div>
+        
+        <div class="view-modes">
+            <button class="view-mode-btn active" onclick="updateViewMode('normal')">Normal</button>
+            <button class="view-mode-btn" onclick="updateViewMode('wireframe')">Wireframe</button>
+            <button class="view-mode-btn" onclick="updateViewMode('xray')">Raio-X</button>
+            <button class="view-mode-btn" onclick="updateViewMode('oxygen')">Mapa O₂</button>
+            <button class="view-mode-btn" onclick="updateViewMode('hemoglobin')">Hemoglobina</button>
+        </div>
+    </div>
+    
+    <div class="cross-sections">
+        <h4 style="margin-top: 0; color: #4ecdc4;">Cortes Transversais</h4>
+        <button class="cross-section-btn" onclick="toggleCrossSection('sagital')">Corte Sagital</button>
+        <button class="cross-section-btn" onclick="toggleCrossSection('coronal')">Corte Coronal</button>
+        <button class="cross-section-btn" onclick="toggleCrossSection('transversal')">Corte Transversal</button>
+        <button class="cross-section-btn" onclick="toggleCrossSection('molecular')">Vista Molecular</button>
+    </div>
+    
+    <div class="info-panel">
+        <div class="info-title">Eritrócito - Transporte de Gases</div>
+        <div class="info-text">
+            O eritrócito é especializado no transporte de oxigênio e dióxido de carbono. 
+            Sua forma bicôncava aumenta a área de superfície para trocas gasosas eficientes.
+            A hemoglobina se liga reversivelmente ao oxigênio, permitindo sua liberação nos tecidos.
+        </div>
+        
+        <div class="gas-transport-display">
+            <div class="gas-metric">
+                <div class="gas-metric-label">Capacidade O₂</div>
+                <div class="gas-metric-value" id="oxygenCapacity">20.1 mL/dL</div>
+            </div>
+            <div class="gas-metric">
+                <div class="gas-metric-label">Conteúdo O₂</div>
+                <div class="gas-metric-value" id="oxygenContent">19.5 mL/dL</div>
+            </div>
+            <div class="gas-metric">
+                <div class="gas-metric-label">P50 (mmHg)</div>
+                <div class="gas-metric-value" id="p50Value">26.8</div>
+            </div>
+            <div class="gas-metric">
+                <div class="gas-metric-label">Afinidade Hb</div>
+                <div class="gas-metric-value" id="hbAffinity">Normal</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        class ErythrocyteUltra {
+            constructor() {
+                this.canvas = document.getElementById('canvas');
+                this.gl = null;
+                this.shaderProgram = null;
+                
+                // Detecção de dispositivo móvel
+                this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                               window.innerWidth <= 768;
+                
+                // Configurações otimizadas para mobile
+                this.performanceSettings = {
+                    particleCount: this.isMobile ? 500 : 1000,
+                    renderQuality: this.isMobile ? 0.7 : 1.0,
+                    animationSpeed: this.isMobile ? 0.5 : 1.0,
+                    enableShadows: !this.isMobile,
+                    enableReflections: !this.isMobile
+                };
+                
+                console.log(`📱 Modo: ${this.isMobile ? 'Mobile' : 'Desktop'}`);
+                console.log('⚙️ Configurações:', this.performanceSettings);
+                this.buffers = {};
+                this.time = 0;
+                
+                this.state = {
+                    viewMode: 0,
+                    opacity: 0.8,
+                    showMolecularFlow: false,
+                    showGasExchange: false
+                };
+                
+                this.components = {
+                    membrane: true,
+                    hemoglobin: true,
+                    spectrin: true,
+                    ankyrin: false,
+                    band3: false
+                };
+                
+                this.gasTransport = {
+                    oxygenSaturation: 97.0,
+                    carbonDioxideLevel: 40.0,
+                    pH: 7.4,
+                    hemoglobinConcentration: 14.0,
+                    oxygenCapacity: 20.1,
+                    oxygenContent: 19.5,
+                    p50: 26.8
+                };
+                
+                this.camera = {
+                    distance: 15,
+                    rotation: { x: 0, y: 0 },
+                    fov: 45
+                };
+                
+                this.mouse = {
+                    isDown: false,
+                    lastX: 0,
+                    lastY: 0
+                };
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupCanvas();
+                this.setupWebGL();
+                this.setupShaders();
+                this.createGeometry();
+                this.setupEventListeners();
+                this.updateGasTransportCalculations();
+            }
+            
+            setupCanvas() {
+                this.canvas.width = this.canvas.clientWidth;
+                this.canvas.height = this.canvas.clientHeight;
+            }
+            
+            setupWebGL() {
+                this.gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
+                
+                if (!this.gl) {
+                    alert('WebGL não é suportado neste navegador');
+                    return;
+                }
+                
+                this.gl.enable(this.gl.DEPTH_TEST);
+                this.gl.enable(this.gl.BLEND);
+                this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+                this.gl.clearColor(0.1, 0.1, 0.2, 1.0);
+                this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+            }
+            
+            setupShaders() {
+                const vertexShaderSource = `
+                    precision mediump float;
+                    attribute vec3 a_position;
+                    attribute vec3 a_normal;
+                    attribute vec2 a_texCoord;
+                    attribute vec4 a_color;
+                    
+                    uniform mat4 u_modelMatrix;
+                    uniform mat4 u_viewMatrix;
+                    uniform mat4 u_projectionMatrix;
+                    uniform float u_time;
+                    uniform float u_oxygenSaturation;
+                    uniform float u_hemoglobinConcentration;
+                    
+                    varying vec3 v_normal;
+                    varying vec2 v_texCoord;
+                    varying vec4 v_color;
+                    varying vec3 v_position;
+                    varying float v_oxygenLevel;
+                    
+                    void main() {
+                        vec3 position = a_position;
+                        
+                        // Deformação baseada na oxigenação
+                        float oxygenEffect = u_oxygenSaturation / 100.0;
+                        position *= (0.98 + 0.02 * oxygenEffect);
+                        
+                        // Animação sutil
+                        position *= (1.0 + 0.01 * sin(u_time * 2.0 + length(position) * 5.0));
+                        
+                        gl_Position = u_projectionMatrix * u_viewMatrix * u_modelMatrix * vec4(position, 1.0);
+                        
+                        v_normal = a_normal;
+                        v_texCoord = a_texCoord;
+                        v_color = a_color;
+                        v_position = position;
+                        v_oxygenLevel = oxygenEffect;
+                    }
+                `;
+                
+                const fragmentShaderSource = `
+                    precision mediump float;
+                    
+                    varying vec3 v_normal;
+                    varying vec2 v_texCoord;
+                    varying vec4 v_color;
+                    varying vec3 v_position;
+                    varying float v_oxygenLevel;
+                    
+                    uniform float u_time;
+                    uniform int u_viewMode;
+                    uniform float u_opacity;
+                    uniform float u_oxygenSaturation;
+                    uniform float u_carbonDioxideLevel;
+                    uniform float u_pH;
+                    uniform float u_hemoglobinConcentration;
+                    
+                    void main() {
+                        vec3 normal = normalize(v_normal);
+                        vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
+                        float lightIntensity = max(dot(normal, lightDir), 0.3);
+                        
+                        vec4 color = v_color;
+                        
+                        if (u_viewMode == 0) {
+                            // Visualização normal
+                            float oxygenRatio = u_oxygenSaturation / 100.0;
+                            vec3 oxygenatedColor = vec3(0.8, 0.1, 0.1);
+                            vec3 deoxygenatedColor = vec3(0.4, 0.1, 0.2);
+                            color.rgb = mix(deoxygenatedColor, oxygenatedColor, oxygenRatio);
+                            
+                        } else if (u_viewMode == 1) {
+                            // Wireframe
+                            color = vec4(1.0, 0.5, 0.5, 0.8);
+                            
+                        } else if (u_viewMode == 2) {
+                            // Raio-X
+                            color = vec4(0.8, 0.8, 1.0, 0.3);
+                            
+                        } else if (u_viewMode == 3) {
+                            // Mapa de oxigênio
+                            float oxygenIntensity = v_oxygenLevel;
+                            color = vec4(oxygenIntensity, 0.0, 1.0 - oxygenIntensity, 0.8);
+                            
+                        } else if (u_viewMode == 4) {
+                            // Distribuição de hemoglobina
+                            float hbDensity = u_hemoglobinConcentration / 18.0;
+                            color = vec4(hbDensity, 0.2, 0.2, 0.9);
+                        }
+                        
+                        color.rgb *= lightIntensity;
+                        
+                        if (u_oxygenSaturation > 95.0) {
+                            color.rgb += vec3(0.1, 0.05, 0.05) * sin(u_time * 3.0);
+                        }
+                        
+                        if (u_pH < 7.35) {
+                            color.rgb *= vec3(1.2, 0.8, 0.8);
+                        } else if (u_pH > 7.45) {
+                            color.rgb *= vec3(0.8, 0.8, 1.2);
+                        }
+                        
+                        color.a *= u_opacity;
+                        gl_FragColor = color;
+                    }
+                `;
+                
+                const vertexShader = this.createShader(this.gl.VERTEX_SHADER, vertexShaderSource);
+                const fragmentShader = this.createShader(this.gl.FRAGMENT_SHADER, fragmentShaderSource);
+                
+                this.shaderProgram = this.createProgram(vertexShader, fragmentShader);
+                this.gl.useProgram(this.shaderProgram);
+                
+                this.updateProjectionMatrix();
+            }
+            
+            createShader(type, source) {
+                const shader = this.gl.createShader(type);
+                this.gl.shaderSource(shader, source);
+                this.gl.compileShader(shader);
+                
+                if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+                    console.error('Erro ao compilar shader:', this.gl.getShaderInfoLog(shader));
+                    this.gl.deleteShader(shader);
+                    return null;
+                }
+                
+                return shader;
+            }
+            
+            createProgram(vertexShader, fragmentShader) {
+                const program = this.gl.createProgram();
+                this.gl.attachShader(program, vertexShader);
+                this.gl.attachShader(program, fragmentShader);
+                this.gl.linkProgram(program);
+                
+                if (!this.gl.getProgramParameter(program, this.gl.LINK_STATUS)) {
+                    console.error('Erro ao linkar programa:', this.gl.getProgramInfoLog(program));
+                    this.gl.deleteProgram(program);
+                    return null;
+                }
+                
+                return program;
+            }
+            
+            createGeometry() {
+                this.createErythrocyteGeometry();
+                this.createHemoglobinGeometry();
+                this.createMembraneGeometry();
+            }
+            
+            createErythrocyteGeometry() {
+                const vertices = [];
+                const normals = [];
+                const texCoords = [];
+                const colors = [];
+                const indices = [];
+                
+                const segments = 64;
+                const rings = 32;
+                
+                for (let ring = 0; ring <= rings; ring++) {
+                    const v = ring / rings;
+                    const theta = v * Math.PI;
+                    
+                    for (let segment = 0; segment <= segments; segment++) {
+                        const u = segment / segments;
+                        const phi = u * Math.PI * 2;
+                        
+                        const r = 3.8;
+                        const thickness = 2.0;
+                        
+                        const x = r * Math.sin(theta) * Math.cos(phi);
+                        const z = r * Math.sin(theta) * Math.sin(phi);
+                        const y = thickness * (0.5 - Math.pow(Math.sin(theta), 2)) * Math.cos(theta);
+                        
+                        vertices.push(x, y, z);
+                        
+                        const nx = Math.sin(theta) * Math.cos(phi);
+                        const ny = Math.cos(theta);
+                        const nz = Math.sin(theta) * Math.sin(phi);
+                        normals.push(nx, ny, nz);
+                        
+                        texCoords.push(u, v);
+                        colors.push(0.8, 0.1, 0.1, 0.9);
+                        
+                        if (ring < rings && segment < segments) {
+                            const current = ring * (segments + 1) + segment;
+                            const next = current + segments + 1;
+                            
+                            indices.push(current, next, current + 1);
+                            indices.push(next, next + 1, current + 1);
+                        }
+                    }
+                }
+                
+                this.buffers.erythrocyte = {
+                    vertex: this.createBuffer(vertices),
+                    normal: this.createBuffer(normals),
+                    texCoord: this.createBuffer(texCoords),
+                    color: this.createBuffer(colors),
+                    index: this.createIndexBuffer(indices),
+                    indexCount: indices.length
+                };
+            }
+            
+            createHemoglobinGeometry() {
+                const vertices = [];
+                const normals = [];
+                const texCoords = [];
+                const colors = [];
+                const indices = [];
+                
+                const displayCount = 500;
+                
+                for (let i = 0; i < displayCount; i++) {
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.random() * Math.PI;
+                    const r = Math.random() * 3.5;
+                    
+                    const x = r * Math.sin(phi) * Math.cos(theta);
+                    const y = (Math.random() - 0.5) * 1.5;
+                    const z = r * Math.sin(phi) * Math.sin(theta);
+                    
+                    const size = 0.05;
+                    const segments = 8;
+                    
+                    for (let j = 0; j < segments; j++) {
+                        const angle = (j / segments) * Math.PI * 2;
+                        const vx = x + size * Math.cos(angle);
+                        const vy = y;
+                        const vz = z + size * Math.sin(angle);
+                        
+                        vertices.push(vx, vy, vz);
+                        normals.push(Math.cos(angle), 0, Math.sin(angle));
+                        texCoords.push(j / segments, 0);
+                        
+                        const oxygenated = Math.random() > 0.03;
+                        if (oxygenated) {
+                            colors.push(0.9, 0.2, 0.2, 0.8);
+                        } else {
+                            colors.push(0.5, 0.1, 0.3, 0.8);
+                        }
+                        
+                        if (j < segments - 1) {
+                            const base = i * segments;
+                            indices.push(base + j, base + j + 1, base + ((j + 2) % segments));
+                        }
+                    }
+                }
+                
+                this.buffers.hemoglobin = {
+                    vertex: this.createBuffer(vertices),
+                    normal: this.createBuffer(normals),
+                    texCoord: this.createBuffer(texCoords),
+                    color: this.createBuffer(colors),
+                    index: this.createIndexBuffer(indices),
+                    indexCount: indices.length
+                };
+            }
+            
+            createMembraneGeometry() {
+                const vertices = [];
+                const normals = [];
+                const texCoords = [];
+                const colors = [];
+                const indices = [];
+                
+                const segments = 128;
+                const rings = 64;
+                
+                for (let ring = 0; ring <= rings; ring++) {
+                    const v = ring / rings;
+                    const theta = v * Math.PI;
+                    
+                    for (let segment = 0; segment <= segments; segment++) {
+                        const u = segment / segments;
+                        const phi = u * Math.PI * 2;
+                        
+                        const r = 3.9;
+                        const thickness = 2.1;
+                        
+                        const x = r * Math.sin(theta) * Math.cos(phi);
+                        const z = r * Math.sin(theta) * Math.sin(phi);
+                        const y = thickness * (0.5 - Math.pow(Math.sin(theta), 2)) * Math.cos(theta);
+                        
+                        vertices.push(x, y, z);
+                        
+                        const nx = Math.sin(theta) * Math.cos(phi);
+                        const ny = Math.cos(theta);
+                        const nz = Math.sin(theta) * Math.sin(phi);
+                        normals.push(nx, ny, nz);
+                        
+                        texCoords.push(u, v);
+                        colors.push(0.9, 0.3, 0.3, 0.6);
+                        
+                        if (ring < rings && segment < segments) {
+                            const current = ring * (segments + 1) + segment;
+                            const next = current + segments + 1;
+                            
+                            indices.push(current, next, current + 1);
+                            indices.push(next, next + 1, current + 1);
+                        }
+                    }
+                }
+                
+                this.buffers.membrane = {
+                    vertex: this.createBuffer(vertices),
+                    normal: this.createBuffer(normals),
+                    texCoord: this.createBuffer(texCoords),
+                    color: this.createBuffer(colors),
+                    index: this.createIndexBuffer(indices),
+                    indexCount: indices.length
+                };
+            }
+            
+            createBuffer(data) {
+                const buffer = this.gl.createBuffer();
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
+                this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(data), this.gl.STATIC_DRAW);
+                return buffer;
+            }
+            
+            createIndexBuffer(data) {
+                const buffer = this.gl.createBuffer();
+                this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, buffer);
+                this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data), this.gl.STATIC_DRAW);
+                return buffer;
+            }
+            
+            setupEventListeners() {
+                // Mouse events
+                this.canvas.addEventListener('mousedown', (e) => {
+                    this.mouse.isDown = true;
+                    this.mouse.lastX = e.clientX;
+                    this.mouse.lastY = e.clientY;
+                });
+                
+                this.canvas.addEventListener('mousemove', (e) => {
+                    if (!this.mouse.isDown) return;
+                    
+                    const deltaX = e.clientX - this.mouse.lastX;
+                    const deltaY = e.clientY - this.mouse.lastY;
+                    
+                    this.camera.rotation.y += deltaX * 0.01;
+                    this.camera.rotation.x += deltaY * 0.01;
+                    
+                    this.mouse.lastX = e.clientX;
+                    this.mouse.lastY = e.clientY;
+                });
+                
+                this.canvas.addEventListener('mouseup', () => {
+                    this.mouse.isDown = false;
+                });
+                
+                this.canvas.addEventListener('wheel', (e) => {
+                    this.camera.distance += e.deltaY * 0.01;
+                    this.camera.distance = Math.max(5, Math.min(50, this.camera.distance));
+                    e.preventDefault();
+                });
+                
+                // Control events
+                document.getElementById('oxygenSaturation').addEventListener('input', (e) => {
+                    this.gasTransport.oxygenSaturation = parseFloat(e.target.value);
+                    document.getElementById('oxygenValue').textContent = e.target.value + '%';
+                    this.updateGasTransportCalculations();
+                });
+                
+                document.getElementById('carbonDioxide').addEventListener('input', (e) => {
+                    this.gasTransport.carbonDioxideLevel = parseFloat(e.target.value);
+                    document.getElementById('co2Value').textContent = e.target.value + ' mmHg';
+                    this.updateGasTransportCalculations();
+                });
+                
+                document.getElementById('bloodPH').addEventListener('input', (e) => {
+                    this.gasTransport.pH = parseFloat(e.target.value);
+                    document.getElementById('pHValue').textContent = e.target.value;
+                    this.updateGasTransportCalculations();
+                });
+                
+                document.getElementById('hemoglobin').addEventListener('input', (e) => {
+                    this.gasTransport.hemoglobinConcentration = parseFloat(e.target.value);
+                    document.getElementById('hbValue').textContent = e.target.value + ' g/dL';
+                    this.updateGasTransportCalculations();
+                });
+                
+                document.getElementById('opacity').addEventListener('input', (e) => {
+                    this.state.opacity = parseFloat(e.target.value);
+                    document.getElementById('opacityValue').textContent = e.target.value;
+                    this.updateOpacity();
+                });
+                
+                // Component checkboxes
+                document.getElementById('showMembrane').addEventListener('change', (e) => {
+                    this.components.membrane = e.target.checked;
+                });
+                
+                document.getElementById('showHemoglobin').addEventListener('change', (e) => {
+                    this.components.hemoglobin = e.target.checked;
+                });
+                
+                document.getElementById('showSpectrin').addEventListener('change', (e) => {
+                    this.components.spectrin = e.target.checked;
+                });
+                
+                document.getElementById('showMolecularFlow').addEventListener('change', (e) => {
+                    this.state.showMolecularFlow = e.target.checked;
+                });
+                
+                document.getElementById('showGasExchange').addEventListener('change', (e) => {
+                    this.state.showGasExchange = e.target.checked;
+                });
+                
+                // Window resize
+                window.addEventListener('resize', () => {
+                    this.setupCanvas();
+                    this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+                    this.updateProjectionMatrix();
+                });
+            }
+            
+            updateGasTransportCalculations() {
+                // Calcular capacidade de oxigênio
+                this.gasTransport.oxygenCapacity = this.gasTransport.hemoglobinConcentration * 1.34;
+                
+                // Calcular conteúdo de oxigênio
+                this.gasTransport.oxygenContent = this.gasTransport.oxygenCapacity * (this.gasTransport.oxygenSaturation / 100);
+                
+                // Calcular P50 baseado no pH (efeito Bohr)
+                const pHEffect = (this.gasTransport.pH - 7.4) * -4.6;
+                this.gasTransport.p50 = 26.8 + pHEffect;
+                
+                // Atualizar displays
+                document.getElementById('oxygenCapacity').textContent = this.gasTransport.oxygenCapacity.toFixed(1) + ' mL/dL';
+                document.getElementById('oxygenContent').textContent = this.gasTransport.oxygenContent.toFixed(1) + ' mL/dL';
+                document.getElementById('p50Value').textContent = this.gasTransport.p50.toFixed(1);
+                
+                // Determinar afinidade da hemoglobina
+                let affinity = 'Normal';
+                if (this.gasTransport.p50 < 24) affinity = 'Alta';
+                else if (this.gasTransport.p50 > 30) affinity = 'Baixa';
+                document.getElementById('hbAffinity').textContent = affinity;
+            }
+            
+            updateViewMode(mode) {
+                const modes = {
+                    'normal': 0,
+                    'wireframe': 1,
+                    'xray': 2,
+                    'oxygen': 3,
+                    'hemoglobin': 4
+                };
+                
+                this.state.viewMode = modes[mode] || 0;
+                
+                if (this.gl && this.shaderProgram) {
+                    const viewModeLocation = this.gl.getUniformLocation(this.shaderProgram, 'u_viewMode');
+                    this.gl.uniform1i(viewModeLocation, this.state.viewMode);
+                }
+            }
+            
+            updateOpacity() {
+                if (this.gl && this.shaderProgram) {
+                    const opacityLocation = this.gl.getUniformLocation(this.shaderProgram, 'u_opacity');
+                    this.gl.uniform1f(opacityLocation, this.state.opacity);
+                }
+            }
+            
+            updateProjectionMatrix() {
+                const aspect = this.canvas.width / this.canvas.height;
+                const projectionMatrix = this.createPerspectiveMatrix(
+                    this.camera.fov * Math.PI / 180,
+                    aspect,
+                    0.1,
+                    100
+                );
+                
+                if (this.gl && this.shaderProgram) {
+                    const projectionLocation = this.gl.getUniformLocation(this.shaderProgram, 'u_projectionMatrix');
+                    this.gl.uniformMatrix4fv(projectionLocation, false, projectionMatrix);
+                }
+            }
+            
+            createPerspectiveMatrix(fov, aspect, near, far) {
+                const f = Math.tan(Math.PI * 0.5 - 0.5 * fov);
+                const rangeInv = 1.0 / (near - far);
+                
+                return new Float32Array([
+                    f / aspect, 0, 0, 0,
+                    0, f, 0, 0,
+                    0, 0, (near + far) * rangeInv, -1,
+                    0, 0, near * far * rangeInv * 2, 0
+                ]);
+            }
+            
+            createViewMatrix() {
+                const matrix = new Float32Array(16);
+                matrix[0] = matrix[5] = matrix[10] = matrix[15] = 1;
+                matrix[14] = -this.camera.distance;
+                
+                const cosX = Math.cos(this.camera.rotation.x);
+                const sinX = Math.sin(this.camera.rotation.x);
+                const rotX = new Float32Array([
+                    1, 0, 0, 0,
+                    0, cosX, sinX, 0,
+                    0, -sinX, cosX, 0,
+                    0, 0, 0, 1
+                ]);
+                
+                const cosY = Math.cos(this.camera.rotation.y);
+                const sinY = Math.sin(this.camera.rotation.y);
+                const rotY = new Float32Array([
+                    cosY, 0, -sinY, 0,
+                    0, 1, 0, 0,
+                    sinY, 0, cosY, 0,
+                    0, 0, 0, 1
+                ]);
+                
+                const temp = new Float32Array(16);
+                this.multiplyMatrices(matrix, rotX, temp);
+                this.multiplyMatrices(temp, rotY, matrix);
+                
+                return matrix;
+            }
+            
+            multiplyMatrices(a, b, result) {
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        result[i * 4 + j] = 0;
+                        for (let k = 0; k < 4; k++) {
+                            result[i * 4 + j] += a[i * 4 + k] * b[k * 4 + j];
+                        }
+                    }
+                }
+            }
+            
+            render() {
+                if (!this.gl || !this.shaderProgram) return;
+                
+                this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+                
+                const timeLocation = this.gl.getUniformLocation(this.shaderProgram, 'u_time');
+                this.gl.uniform1f(timeLocation, this.time);
+                
+                const oxygenSaturationLocation = this.gl.getUniformLocation(this.shaderProgram, 'u_oxygenSaturation');
+                this.gl.uniform1f(oxygenSaturationLocation, this.gasTransport.oxygenSaturation);
+                
+                const carbonDioxideLocation = this.gl.getUniformLocation(this.shaderProgram, 'u_carbonDioxideLevel');
+                this.gl.uniform1f(carbonDioxideLocation, this.gasTransport.carbonDioxideLevel);
+                
+                const pHLocation = this.gl.getUniformLocation(this.shaderProgram, 'u_pH');
+                this.gl.uniform1f(pHLocation, this.gasTransport.pH);
+                
+                const hemoglobinLocation = this.gl.getUniformLocation(this.shaderProgram, 'u_hemoglobinConcentration');
+                this.gl.uniform1f(hemoglobinLocation, this.gasTransport.hemoglobinConcentration);
+                
+                const viewMatrix = this.createViewMatrix();
+                const viewLocation = this.gl.getUniformLocation(this.shaderProgram, 'u_viewMatrix');
+                this.gl.uniformMatrix4fv(viewLocation, false, viewMatrix);
+                
+                const modelMatrix = new Float32Array([
+                    1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1
+                ]);
+                const modelLocation = this.gl.getUniformLocation(this.shaderProgram, 'u_modelMatrix');
+                this.gl.uniformMatrix4fv(modelLocation, false, modelMatrix);
+                
+                this.renderComponent('erythrocyte');
+                
+                if (this.components.membrane) this.renderComponent('membrane');
+                if (this.components.hemoglobin) this.renderComponent('hemoglobin');
+            }
+            
+            renderComponent(componentName) {
+                const buffer = this.buffers[componentName];
+                if (!buffer) return;
+                
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer.vertex);
+                const positionLocation = this.gl.getAttribLocation(this.shaderProgram, 'a_position');
+                this.gl.enableVertexAttribArray(positionLocation);
+                this.gl.vertexAttribPointer(positionLocation, 3, this.gl.FLOAT, false, 0, 0);
+                
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer.normal);
+                const normalLocation = this.gl.getAttribLocation(this.shaderProgram, 'a_normal');
+                this.gl.enableVertexAttribArray(normalLocation);
+                this.gl.vertexAttribPointer(normalLocation, 3, this.gl.FLOAT, false, 0, 0);
+                
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer.texCoord);
+                const texCoordLocation = this.gl.getAttribLocation(this.shaderProgram, 'a_texCoord');
+                this.gl.enableVertexAttribArray(texCoordLocation);
+                this.gl.vertexAttribPointer(texCoordLocation, 2, this.gl.FLOAT, false, 0, 0);
+                
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer.color);
+                const colorLocation = this.gl.getAttribLocation(this.shaderProgram, 'a_color');
+                this.gl.enableVertexAttribArray(colorLocation);
+                this.gl.vertexAttribPointer(colorLocation, 4, this.gl.FLOAT, false, 0, 0);
+                
+                this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, buffer.index);
+                this.gl.drawElements(this.gl.TRIANGLES, buffer.indexCount, this.gl.UNSIGNED_SHORT, 0);
+            }
+            
+            animate() {
+                this.time += 0.016;
+                this.updateGasTransportCalculations();
+                this.render();
+                requestAnimationFrame(() => this.animate());
+            }
+            
+            start() {
+                this.init();
+                this.animate();
+            }
+        }
+        
+        // Funções globais
+        function updateViewMode(mode) {
+            if (window.erythrocyte) {
+                window.erythrocyte.updateViewMode(mode);
+            }
+            
+            document.querySelectorAll('.view-mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+        
+        function toggleCrossSection(type) {
+            console.log(`Ativando corte ${type}`);
+        }
+        
+        // Função para toggle dos controles no mobile
+        function toggleMobileControls() {
+            const controls = document.querySelector('.controls');
+            if (controls) {
+                controls.classList.toggle('mobile-open');
+            }
+        }
+        
+        // Função de inicialização para ser chamada após carregar bibliotecas
+        function initErythrocyte() {
+            if (typeof THREE === 'undefined') {
+                console.log('⏳ Aguardando Three.js...');
+                setTimeout(initErythrocyte, 100);
+                return;
+            }
+            
+            console.log('🚀 Inicializando Eritrócito Ultra...');
+            window.erythrocyte = new ErythrocyteUltra();
+            window.erythrocyte.start();
+        }
+        
+        // Fallback para inicialização direta se as bibliotecas já estiverem carregadas
+        window.addEventListener('load', () => {
+            // Aguardar um pouco para garantir que os scripts foram processados
+            setTimeout(() => {
+                if (typeof THREE !== 'undefined' && !window.erythrocyte) {
+                    initErythrocyte();
+                }
+            }, 500);
+        });
+    </script>
+
+    <!-- Service Worker para funcionamento offline -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(registration => {
+                        console.log('✅ SW registrado:', registration);
+                    })
+                    .catch(error => {
+                        console.log('⚠️ SW não disponível:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

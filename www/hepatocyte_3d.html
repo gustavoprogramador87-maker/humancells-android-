@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="offline-ready" content="true">
+    <title>Hepatócito 3D - Visualização Científica Avançada</title>
+    <script src="./libs/three.min.js"></script>
+    <script src="./libs/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            overflow: hidden;
+            color: white;
+        }
+
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 380px;
+            z-index: 1000;
+        }
+
+        #info-panel h1 {
+            color: #f59e0b;
+            margin-bottom: 10px;
+            font-size: 1.6em;
+        }
+
+        #info-panel p {
+            margin-bottom: 8px;
+            line-height: 1.4;
+            font-size: 0.9em;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .control-group {
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-group h3 {
+            color: #f59e0b;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        button {
+            background: linear-gradient(45deg, #f59e0b, #fbbf24);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            margin: 3px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4);
+        }
+
+        button.active {
+            background: linear-gradient(45deg, #059669, #10b981);
+        }
+
+        .slider-container {
+            margin: 10px 0;
+        }
+
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+            color: #f59e0b;
+            font-size: 0.8em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .stats {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+        }
+
+        .stats h3 {
+            color: #f59e0b;
+            margin-bottom: 10px;
+        }
+
+        .stat-item {
+            margin: 5px 0;
+            font-size: 0.8em;
+        }
+
+        .label {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .metabolic-activity {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+        }
+
+        .activity-bar {
+            width: 200px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .activity-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .research-insights {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 320px;
+            z-index: 1000;
+        }
+
+        .research-insights h3 {
+            color: #8b5cf6;
+            margin-bottom: 10px;
+        }
+
+        .insight-item {
+            margin: 8px 0;
+            font-size: 0.8em;
+            padding: 8px;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 5px;
+            border-left: 3px solid #8b5cf6;
+        }
+
+        .enzyme-visualization {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 500;
+        }
+
+        .enzyme-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: enzymeAnimation 3s linear infinite;
+        }
+
+        @keyframes enzymeAnimation {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.5); }
+            100% { opacity: 0; transform: scale(0.5); }
+        }
+
+        .metabolic-process {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #f59e0b;
+            border-radius: 50%;
+            animation: metabolicPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes metabolicPulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.8); }
+        }
+
+        @media (max-width: 768px) {
+            #info-panel {
+                max-width: 280px;
+                padding: 15px;
+            }
+            
+            .controls {
+                bottom: 10px;
+                left: 10px;
+            }
+            
+            .stats {
+                top: 10px;
+                right: 10px;
+                padding: 10px;
+            }
+            
+            .metabolic-activity {
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            .research-insights {
+                display: none;
+            }
+        }
+    </style>
+<link rel="stylesheet" href="./libs/fonts.css">
+</head>
+<body>
+    <!-- Indicador de modo offline -->
+    <div id="offline-indicator" style="
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: linear-gradient(45deg, #ff6b35, #f7931e);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        z-index: 10000;
+        display: none;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    ">
+        <span style="
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        "></span>
+        <span>Modo Offline</span>
+    </div>
+    
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+    
+    <script>
+        // Mostrar indicador offline
+        function updateOfflineIndicator() {
+            const indicator = document.getElementById('offline-indicator');
+            if (!navigator.onLine) {
+                indicator.style.display = 'flex';
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+        
+        window.addEventListener('online', updateOfflineIndicator);
+        window.addEventListener('offline', updateOfflineIndicator);
+        document.addEventListener('DOMContentLoaded', updateOfflineIndicator);
+    </script>
+    <div id="container">
+        <div id="info-panel">
+            <h1>🧬 Hepatócito</h1>
+            <p><strong>Função:</strong> Metabolismo, detoxificação e síntese</p>
+            <p><strong>Localização:</strong> Fígado (80% das células hepáticas)</p>
+            <p><strong>Tamanho:</strong> 20-30 μm de diâmetro</p>
+            <p><strong>Vida útil:</strong> 150-300 dias</p>
+            <p><strong>Funções:</strong> 500+ reações metabólicas</p>
+            <p><strong>Regeneração:</strong> Capacidade única de regeneração</p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <h3>Estruturas Celulares</h3>
+                <button onclick="toggleCellBody()">Corpo Celular</button>
+                <button onclick="toggleNucleus()">Núcleo</button>
+                <button onclick="toggleMitochondria()">Mitocôndrias</button>
+                <button onclick="toggleER()">Retículo Endoplasmático</button>
+                <button onclick="toggleGolgi()">Complexo de Golgi</button>
+                <button onclick="togglePeroxisomes()">Peroxissomos</button>
+                <button onclick="toggleLysosomes()">Lisossomos</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>Processos Metabólicos</h3>
+                <button onclick="simulateGluconeogenesis()">Gliconeogênese</button>
+                <button onclick="simulateDetoxification()">Detoxificação</button>
+                <button onclick="simulateProteinSynthesis()">Síntese Proteica</button>
+                <button onclick="simulateLipidMetabolism()">Metabolismo Lipídico</button>
+                <button onclick="simulateBileProduction()">Produção de Bile</button>
+                <button onclick="simulateRegeneration()">Regeneração</button>
+            </div>
+
+            <div class="slider-container">
+                <label for="metabolicRate">Taxa Metabólica:</label>
+                <input type="range" id="metabolicRate" min="10" max="100" value="75" onchange="updateMetabolicRate(this.value)">
+            </div>
+
+            <div class="slider-container">
+                <label for="detoxActivity">Atividade Detox:</label>
+                <input type="range" id="detoxActivity" min="0" max="100" value="60" onchange="updateDetoxActivity(this.value)">
+            </div>
+
+            <div class="slider-container">
+                <label for="regenerationRate">Taxa de Regeneração:</label>
+                <input type="range" id="regenerationRate" min="0" max="100" value="40" onchange="updateRegenerationRate(this.value)">
+            </div>
+        </div>
+
+        <div class="stats">
+            <h3>📊 Parâmetros Hepáticos</h3>
+            <div class="stat-item">Metabolismo: <span id="metabolicValue">75%</span></div>
+            <div class="stat-item">Detox: <span id="detoxValue">60%</span></div>
+            <div class="stat-item">Regeneração: <span id="regenValue">40%</span></div>
+            <div class="stat-item">Função: <span id="functionValue">Normal</span></div>
+            <div class="stat-item">Estado: <span id="cellState">Saudável</span></div>
+        </div>
+
+        <div class="metabolic-activity">
+            <h3>⚡ Atividade Metabólica</h3>
+            <div class="activity-bar">
+                <div class="activity-fill" id="activityFill" style="width: 75%"></div>
+            </div>
+            <div>Atividade: <span id="activityLevel">75%</span></div>
+            <div>Enzimas: <span id="enzymeStatus">Ativas</span></div>
+            <div>Função: <span id="functionStatus">Normal</span></div>
+        </div>
+
+        <div class="research-insights">
+            <h3>🧬 Descobertas Científicas Recentes</h3>
+            <div class="insight-item">
+                <strong>2023:</strong> Descoberta de novos mecanismos de regeneração hepática via células progenitoras
+            </div>
+            <div class="insight-item">
+                <strong>2023:</strong> Papel dos hepatócitos na regulação do metabolismo circadiano e ritmos biológicos
+            </div>
+            <div class="insight-item">
+                <strong>2024:</strong> Zonação metabólica e especialização funcional em diferentes regiões do lóbulo
+            </div>
+            <div class="insight-item">
+                <strong>2024:</strong> Comunicação intercelular via exosomas hepáticos e microRNAs
+            </div>
+            <div class="insight-item">
+                <strong>2024:</strong> Metabolismo de xenobióticos e farmacogenômica personalizada
+            </div>
+            <div class="insight-item">
+                <strong>2024:</strong> Hepatócitos e regulação da homeostase glicêmica via FGF21
+            </div>
+        </div>
+
+        <div class="enzyme-visualization" id="enzymeVisualization"></div>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let scene, camera, renderer, labelRenderer, controls;
+        let hepatocyte = {};
+        let animationId;
+        let metabolicRate = 75;
+        let detoxActivity = 60;
+        let regenerationRate = 40;
+
+        // Estruturas do hepatócito
+        let structures = [];
+
+        // Sistema de IA para análise hepática
+        class HepatocyteAI {
+            constructor() {
+                this.analysisData = {
+                    metabolicRate: 75,
+                    detoxActivity: 60,
+                    regenerationRate: 40,
+                    functionalState: 'normal'
+                };
+                this.researchInsights = [
+                    "Hepatócitos realizam mais de 500 funções metabólicas diferentes",
+                    "Capacidade única de regeneração após lesão hepática",
+                    "Zonação metabólica: diferentes funções em diferentes zonas do lóbulo",
+                    "Metabolismo de primeira passagem para medicamentos",
+                    "Síntese de proteínas plasmáticas essenciais",
+                    "Regulação da glicemia através de gliconeogênese e glicogenólise",
+                    "Detoxificação através do sistema citocromo P450",
+                    "Produção de bile e metabolismo de colesterol",
+                    "Síntese de fatores de coagulação",
+                    "Metabolismo de hormônios esteroides"
+                ];
+            }
+
+            analyzeHepatocyte() {
+                const insights = this.researchInsights;
+                return insights[Math.floor(Math.random() * insights.length)];
+            }
+
+            updateAnalysis(metabolic, detox, regen) {
+                this.analysisData.metabolicRate = metabolic;
+                this.analysisData.detoxActivity = detox;
+                this.analysisData.regenerationRate = regen;
+                this.analysisData.functionalState = this.assessFunctionalState(metabolic, detox, regen);
+            }
+
+            assessFunctionalState(metabolic, detox, regen) {
+                const average = (metabolic + detox + regen) / 3;
+                if (average >= 80) return 'excellent';
+                if (average >= 60) return 'normal';
+                if (average >= 40) return 'compromised';
+                return 'damaged';
+            }
+        }
+
+        const hepatocyteAI = new HepatocyteAI();
+
+        function init() {
+            // Configuração da cena
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a0a);
+
+            // Câmera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 10, 30);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            // Label Renderer
+            labelRenderer = new THREE.CSS2DRenderer();
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.domElement.style.position = 'absolute';
+            labelRenderer.domElement.style.top = '0px';
+            labelRenderer.domElement.style.pointerEvents = 'none';
+            document.getElementById('container').appendChild(labelRenderer.domElement);
+
+            // Controles
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Iluminação
+            setupLighting();
+
+            // Criar hepatócito
+            createHepatocyte();
+
+            // Iniciar animação
+            animate();
+
+            // Eventos
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function setupLighting() {
+            // Luz ambiente
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+            scene.add(ambientLight);
+
+            // Luz direcional principal
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(30, 30, 30);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+
+            // Luzes pontuais coloridas
+            const pointLight1 = new THREE.PointLight(0xf59e0b, 0.6, 60);
+            pointLight1.position.set(15, 15, 15);
+            scene.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0xfbbf24, 0.4, 60);
+            pointLight2.position.set(-15, -15, 15);
+            scene.add(pointLight2);
+
+            const pointLight3 = new THREE.PointLight(0x10b981, 0.3, 60);
+            pointLight3.position.set(0, 25, -15);
+            scene.add(pointLight3);
+        }
+
+        function createHepatocyte() {
+            // Corpo celular
+            createCellBody();
+            
+            // Núcleo
+            createNucleus();
+            
+            // Mitocôndrias
+            createMitochondria();
+            
+            // Retículo Endoplasmático
+            createER();
+            
+            // Complexo de Golgi
+            createGolgi();
+            
+            // Peroxissomos
+            createPeroxisomes();
+            
+            // Lisossomos
+            createLysosomes();
+        }
+
+        function createCellBody() {
+            // Corpo celular poligonal (hepatócitos têm forma poligonal)
+            const cellBodyGeometry = new THREE.DodecahedronGeometry(4, 0);
+            const cellBodyMaterial = new THREE.MeshPhongMaterial({
+                color: 0xf59e0b,
+                transparent: true,
+                opacity: 0.7,
+                shininess: 100
+            });
+            
+            hepatocyte.cellBody = new THREE.Mesh(cellBodyGeometry, cellBodyMaterial);
+            hepatocyte.cellBody.position.set(0, 0, 0);
+            hepatocyte.cellBody.userData.structureType = 'Corpo Celular';
+            scene.add(hepatocyte.cellBody);
+            structures.push(hepatocyte.cellBody);
+            addLabel(hepatocyte.cellBody, 'Corpo Celular');
+        }
+
+        function createNucleus() {
+            // Núcleo grande e central
+            const nucleusGeometry = new THREE.SphereGeometry(2, 24, 24);
+            const nucleusMaterial = new THREE.MeshPhongMaterial({
+                color: 0x8b5cf6,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            hepatocyte.nucleus = new THREE.Mesh(nucleusGeometry, nucleusMaterial);
+            hepatocyte.nucleus.position.set(0, 0, 0);
+            hepatocyte.nucleus.userData.structureType = 'Núcleo';
+            scene.add(hepatocyte.nucleus);
+            structures.push(hepatocyte.nucleus);
+            addLabel(hepatocyte.nucleus, 'Núcleo');
+
+            // Nucléolo
+            const nucleolusGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+            const nucleolusMaterial = new THREE.MeshPhongMaterial({
+                color: 0x6366f1,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const nucleolus = new THREE.Mesh(nucleolusGeometry, nucleolusMaterial);
+            nucleolus.position.set(0.5, 0.5, 0);
+            hepatocyte.nucleus.add(nucleolus);
+        }
+
+        function createMitochondria() {
+            hepatocyte.mitochondria = new THREE.Group();
+            
+            // Hepatócitos têm muitas mitocôndrias devido ao alto metabolismo
+            for (let i = 0; i < 25; i++) {
+                const mitochondriaGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.6, 8);
+                const mitochondriaMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x10b981,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const mitochondria = new THREE.Mesh(mitochondriaGeometry, mitochondriaMaterial);
+                
+                // Distribuir por toda a célula
+                const radius = 1.5 + Math.random() * 2.5;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                
+                mitochondria.position.set(
+                    radius * Math.sin(phi) * Math.cos(theta),
+                    radius * Math.sin(phi) * Math.sin(theta),
+                    radius * Math.cos(phi)
+                );
+                
+                mitochondria.rotation.set(
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI
+                );
+                
+                hepatocyte.mitochondria.add(mitochondria);
+            }
+            
+            hepatocyte.mitochondria.userData.structureType = 'Mitocôndrias';
+            scene.add(hepatocyte.mitochondria);
+            structures.push(hepatocyte.mitochondria);
+            addLabel(hepatocyte.mitochondria, 'Mitocôndrias');
+        }
+
+        function createER() {
+            hepatocyte.er = new THREE.Group();
+            
+            // Retículo Endoplasmático Rugoso (abundante em hepatócitos)
+            for (let i = 0; i < 15; i++) {
+                const erGeometry = new THREE.TorusGeometry(0.8, 0.1, 8, 16);
+                const erMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x06b6d4,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                
+                const erSegment = new THREE.Mesh(erGeometry, erMaterial);
+                
+                const radius = 2 + Math.random() * 1.5;
+                const theta = (i / 15) * Math.PI * 2;
+                
+                erSegment.position.set(
+                    radius * Math.cos(theta),
+                    (Math.random() - 0.5) * 3,
+                    radius * Math.sin(theta)
+                );
+                
+                erSegment.rotation.set(
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI
+                );
+                
+                hepatocyte.er.add(erSegment);
+                
+                // Ribossomos no RE rugoso
+                for (let j = 0; j < 8; j++) {
+                    const ribosomeGeometry = new THREE.SphereGeometry(0.03, 6, 6);
+                    const ribosomeMaterial = new THREE.MeshPhongMaterial({
+                        color: 0x3b82f6
+                    });
+                    
+                    const ribosome = new THREE.Mesh(ribosomeGeometry, ribosomeMaterial);
+                    const angle = (j / 8) * Math.PI * 2;
+                    ribosome.position.set(
+                        Math.cos(angle) * 0.9,
+                        (Math.random() - 0.5) * 0.2,
+                        Math.sin(angle) * 0.9
+                    );
+                    
+                    erSegment.add(ribosome);
+                }
+            }
+            
+            hepatocyte.er.userData.structureType = 'Retículo Endoplasmático';
+            scene.add(hepatocyte.er);
+            structures.push(hepatocyte.er);
+            addLabel(hepatocyte.er, 'Retículo Endoplasmático');
+        }
+
+        function createGolgi() {
+            hepatocyte.golgi = new THREE.Group();
+            
+            // Complexo de Golgi - estrutura em pilhas
+            for (let i = 0; i < 6; i++) {
+                const golgiGeometry = new THREE.CylinderGeometry(1.2, 1.2, 0.1, 16);
+                const golgiMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xfbbf24,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const golgiStack = new THREE.Mesh(golgiGeometry, golgiMaterial);
+                golgiStack.position.set(2, i * 0.15 - 0.4, 2);
+                golgiStack.rotation.x = Math.PI / 2;
+                
+                hepatocyte.golgi.add(golgiStack);
+            }
+            
+            hepatocyte.golgi.userData.structureType = 'Complexo de Golgi';
+            scene.add(hepatocyte.golgi);
+            structures.push(hepatocyte.golgi);
+            addLabel(hepatocyte.golgi, 'Complexo de Golgi');
+        }
+
+        function createPeroxisomes() {
+            hepatocyte.peroxisomes = new THREE.Group();
+            
+            // Peroxissomos - importantes para detoxificação
+            for (let i = 0; i < 12; i++) {
+                const peroxisomeGeometry = new THREE.SphereGeometry(0.2, 12, 12);
+                const peroxisomeMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xef4444,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const peroxisome = new THREE.Mesh(peroxisomeGeometry, peroxisomeMaterial);
+                
+                const radius = 2 + Math.random() * 1.5;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                
+                peroxisome.position.set(
+                    radius * Math.sin(phi) * Math.cos(theta),
+                    radius * Math.sin(phi) * Math.sin(theta),
+                    radius * Math.cos(phi)
+                );
+                
+                hepatocyte.peroxisomes.add(peroxisome);
+            }
+            
+            hepatocyte.peroxisomes.userData.structureType = 'Peroxissomos';
+            scene.add(hepatocyte.peroxisomes);
+            structures.push(hepatocyte.peroxisomes);
+            addLabel(hepatocyte.peroxisomes, 'Peroxissomos');
+        }
+
+        function createLysosomes() {
+            hepatocyte.lysosomes = new THREE.Group();
+            
+            // Lisossomos
+            for (let i = 0; i < 10; i++) {
+                const lysosomeGeometry = new THREE.SphereGeometry(0.15, 12, 12);
+                const lysosomeMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x8b5cf6,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const lysosome = new THREE.Mesh(lysosomeGeometry, lysosomeMaterial);
+                
+                const radius = 2.5 + Math.random() * 1;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                
+                lysosome.position.set(
+                    radius * Math.sin(phi) * Math.cos(theta),
+                    radius * Math.sin(phi) * Math.sin(theta),
+                    radius * Math.cos(phi)
+                );
+                
+                hepatocyte.lysosomes.add(lysosome);
+            }
+            
+            hepatocyte.lysosomes.userData.structureType = 'Lisossomos';
+            scene.add(hepatocyte.lysosomes);
+            structures.push(hepatocyte.lysosomes);
+            addLabel(hepatocyte.lysosomes, 'Lisossomos');
+        }
+
+        function addLabel(object, text) {
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'label';
+            labelDiv.textContent = text;
+            const label = new THREE.CSS2DObject(labelDiv);
+            label.position.set(0, 0, 0);
+            object.add(label);
+        }
+
+        // Funções de controle
+        function toggleCellBody() {
+            hepatocyte.cellBody.visible = !hepatocyte.cellBody.visible;
+        }
+
+        function toggleNucleus() {
+            hepatocyte.nucleus.visible = !hepatocyte.nucleus.visible;
+        }
+
+        function toggleMitochondria() {
+            hepatocyte.mitochondria.visible = !hepatocyte.mitochondria.visible;
+        }
+
+        function toggleER() {
+            hepatocyte.er.visible = !hepatocyte.er.visible;
+        }
+
+        function toggleGolgi() {
+            hepatocyte.golgi.visible = !hepatocyte.golgi.visible;
+        }
+
+        function togglePeroxisomes() {
+            hepatocyte.peroxisomes.visible = !hepatocyte.peroxisomes.visible;
+        }
+
+        function toggleLysosomes() {
+            hepatocyte.lysosomes.visible = !hepatocyte.lysosomes.visible;
+        }
+
+        // Simulações
+        function simulateGluconeogenesis() {
+            console.log("Simulando gliconeogênese...");
+            
+            // Ativação das mitocôndrias
+            hepatocyte.mitochondria.children.forEach((mito, index) => {
+                setTimeout(() => {
+                    mito.material.emissive.setHex(0x333333);
+                    mito.scale.setScalar(1.3);
+                    
+                    setTimeout(() => {
+                        mito.material.emissive.setHex(0x000000);
+                        mito.scale.setScalar(1);
+                    }, 500);
+                }, index * 30);
+            });
+        }
+
+        function simulateDetoxification() {
+            console.log("Simulando detoxificação...");
+            
+            // Ativação dos peroxissomos
+            hepatocyte.peroxisomes.children.forEach((perox, index) => {
+                setTimeout(() => {
+                    perox.material.emissive.setHex(0x666666);
+                    perox.scale.setScalar(1.5);
+                    
+                    setTimeout(() => {
+                        perox.material.emissive.setHex(0x000000);
+                        perox.scale.setScalar(1);
+                    }, 400);
+                }, index * 80);
+            });
+        }
+
+        function simulateProteinSynthesis() {
+            console.log("Simulando síntese proteica...");
+            
+            // Ativação do RE rugoso
+            hepatocyte.er.children.forEach((er, index) => {
+                setTimeout(() => {
+                    er.material.emissive.setHex(0x222222);
+                    er.children.forEach(ribosome => {
+                        ribosome.material.emissive.setHex(0x444444);
+                    });
+                    
+                    setTimeout(() => {
+                        er.material.emissive.setHex(0x000000);
+                        er.children.forEach(ribosome => {
+                            ribosome.material.emissive.setHex(0x000000);
+                        });
+                    }, 600);
+                }, index * 50);
+            });
+        }
+
+        function simulateLipidMetabolism() {
+            console.log("Simulando metabolismo lipídico...");
+            
+            // Ativação coordenada de mitocôndrias e RE
+            const structures = [hepatocyte.mitochondria, hepatocyte.er];
+            
+            structures.forEach((structure, structIndex) => {
+                structure.children.forEach((child, index) => {
+                    setTimeout(() => {
+                        child.material.emissive.setHex(0x333333);
+                        child.scale.setScalar(1.2);
+                        
+                        setTimeout(() => {
+                            child.material.emissive.setHex(0x000000);
+                            child.scale.setScalar(1);
+                        }, 400);
+                    }, (structIndex * 200) + (index * 40));
+                });
+            });
+        }
+
+        function simulateBileProduction() {
+            console.log("Simulando produção de bile...");
+            
+            // Ativação do Golgi
+            hepatocyte.golgi.children.forEach((golgi, index) => {
+                setTimeout(() => {
+                    golgi.material.emissive.setHex(0x444444);
+                    golgi.scale.setScalar(1.3);
+                    
+                    setTimeout(() => {
+                        golgi.material.emissive.setHex(0x000000);
+                        golgi.scale.setScalar(1);
+                    }, 500);
+                }, index * 100);
+            });
+        }
+
+        function simulateRegeneration() {
+            console.log("Simulando regeneração...");
+            
+            // Ativação do núcleo e síntese de DNA
+            hepatocyte.nucleus.material.emissive.setHex(0x666666);
+            hepatocyte.nucleus.scale.setScalar(1.4);
+            
+            setTimeout(() => {
+                hepatocyte.nucleus.material.emissive.setHex(0x000000);
+                hepatocyte.nucleus.scale.setScalar(1);
+                
+                // Crescimento celular
+                hepatocyte.cellBody.scale.setScalar(1.2);
+                setTimeout(() => {
+                    hepatocyte.cellBody.scale.setScalar(1);
+                }, 1000);
+            }, 800);
+        }
+
+        function updateMetabolicRate(value) {
+            metabolicRate = value;
+            hepatocyteAI.updateAnalysis(value, detoxActivity, regenerationRate);
+            
+            document.getElementById('metabolicValue').textContent = value + '%';
+            
+            // Atualizar atividade metabólica
+            document.getElementById('activityLevel').textContent = value + '%';
+            document.getElementById('activityFill').style.width = value + '%';
+            
+            // Atualizar status das enzimas
+            const enzymeStatus = value >= 60 ? 'Ativas' : value >= 30 ? 'Moderadas' : 'Baixas';
+            document.getElementById('enzymeStatus').textContent = enzymeStatus;
+        }
+
+        function updateDetoxActivity(value) {
+            detoxActivity = value;
+            hepatocyteAI.updateAnalysis(metabolicRate, value, regenerationRate);
+            
+            document.getElementById('detoxValue').textContent = value + '%';
+            
+            // Atualizar aparência dos peroxissomos
+            hepatocyte.peroxisomes.children.forEach(perox => {
+                const intensity = value / 100;
+                perox.material.opacity = 0.5 + intensity * 0.5;
+                perox.scale.setScalar(0.8 + intensity * 0.4);
+            });
+        }
+
+        function updateRegenerationRate(value) {
+            regenerationRate = value;
+            hepatocyteAI.updateAnalysis(metabolicRate, detoxActivity, value);
+            
+            document.getElementById('regenValue').textContent = value + '%';
+            
+            // Atualizar estado funcional
+            const functionalState = hepatocyteAI.analysisData.functionalState;
+            const functionNames = {
+                'excellent': 'Excelente',
+                'normal': 'Normal',
+                'compromised': 'Comprometida',
+                'damaged': 'Danificada'
+            };
+            document.getElementById('functionValue').textContent = functionNames[functionalState];
+            
+            // Atualizar estado celular
+            const average = (metabolicRate + detoxActivity + value) / 3;
+            const cellState = average >= 70 ? 'Saudável' : average >= 50 ? 'Funcional' : 'Comprometido';
+            document.getElementById('cellState').textContent = cellState;
+        }
+
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+            
+            const time = Date.now() * 0.001;
+            
+            // Rotação suave do hepatócito
+            if (hepatocyte.cellBody) {
+                hepatocyte.cellBody.rotation.y += 0.002;
+            }
+            
+            // Pulsação do núcleo
+            if (hepatocyte.nucleus) {
+                hepatocyte.nucleus.scale.setScalar(1 + Math.sin(time * 2) * 0.05);
+            }
+            
+            // Movimento das mitocôndrias
+            if (hepatocyte.mitochondria) {
+                hepatocyte.mitochondria.children.forEach((mito, index) => {
+                    mito.rotation.x += 0.01;
+                    mito.rotation.y += 0.005;
+                    if (mito.material && mito.material.emissive) {
+                        mito.material.emissive.setRGB(
+                            0,
+                            Math.sin(time * 1.5 + index) * 0.1,
+                            0
+                        );
+                    }
+                });
+            }
+            
+            // Atividade do RE
+            if (hepatocyte.er) {
+                hepatocyte.er.children.forEach((er, index) => {
+                    er.rotation.z += 0.002;
+                    if (er.material && er.material.emissive) {
+                        er.material.emissive.setRGB(
+                            0,
+                            Math.sin(time * 2 + index) * 0.05,
+                            Math.sin(time * 2 + index) * 0.1
+                        );
+                    }
+                });
+            }
+            
+            // Atividade dos peroxissomos
+            if (hepatocyte.peroxisomes) {
+                hepatocyte.peroxisomes.children.forEach((perox, index) => {
+                    if (perox.material && perox.material.emissive) {
+                        perox.material.emissive.setRGB(
+                            Math.sin(time * 3 + index) * 0.1,
+                            0,
+                            0
+                        );
+                    }
+                });
+            }
+            
+            // Processamento no Golgi
+            if (hepatocyte.golgi) {
+                hepatocyte.golgi.children.forEach((golgi, index) => {
+                    if (golgi.material && golgi.material.emissive) {
+                        golgi.material.emissive.setRGB(
+                            Math.sin(time * 1.8 + index) * 0.08,
+                            Math.sin(time * 1.8 + index) * 0.08,
+                            0
+                        );
+                    }
+                });
+            }
+            
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Inicializar quando a página carregar
+        window.addEventListener('load', init);
+    </script>
+
+    <!-- Service Worker para funcionamento offline -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(registration => {
+                        console.log('✅ SW registrado:', registration);
+                    })
+                    .catch(error => {
+                        console.log('⚠️ SW não disponível:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

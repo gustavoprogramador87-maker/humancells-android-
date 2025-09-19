@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="offline-ready" content="true">
+    <title>Linfócito 3D Ultra-Detalhado - Ativação Imune</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas {
+            display: block;
+            cursor: grab;
+            background: radial-gradient(circle at center, #0a0a1a, #000);
+        }
+
+        #canvas:active {
+            cursor: grabbing;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 300px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group h3 {
+            color: #4fc3f7;
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .slider-container {
+            margin-bottom: 15px;
+        }
+
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #b0bec5;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #333;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #4fc3f7;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        button {
+            background: linear-gradient(45deg, #4fc3f7, #29b6f6);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 80px;
+        }
+
+        button:hover {
+            background: linear-gradient(45deg, #29b6f6, #0288d1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(79, 195, 247, 0.3);
+        }
+
+        button.active {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+        }
+
+        .cross-section-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 280px;
+        }
+
+        .cross-section-panel h3 {
+            color: #4fc3f7;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .activation-display {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .activation-display h4 {
+            color: #81c784;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .activation-meter {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .activation-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a, #cddc39);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 400px;
+        }
+
+        .info-panel h4 {
+            color: #4fc3f7;
+            margin-bottom: 10px;
+        }
+
+        .info-panel p {
+            font-size: 12px;
+            line-height: 1.4;
+            color: #b0bec5;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(79, 195, 247, 0.3);
+            border-top: 3px solid #4fc3f7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .value-display {
+            display: inline-block;
+            background: rgba(79, 195, 247, 0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 10px;
+            color: #4fc3f7;
+        }
+
+        /* Otimizações para Mobile */
+        @media (max-width: 768px) {
+            .controls {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                width: 280px;
+                max-height: 80vh;
+                overflow-y: auto;
+            }
+
+            .controls.mobile-open {
+                transform: translateX(0);
+            }
+
+            .mobile-toggle {
+                display: block;
+                position: fixed;
+                top: 20px;
+                left: 20px;
+                z-index: 1001;
+                background: rgba(79, 195, 247, 0.9);
+                border: none;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+                color: white;
+                cursor: pointer;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            }
+
+            .info-panel {
+                bottom: 10px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+                font-size: 12px;
+            }
+        }
+
+        .mobile-toggle {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-toggle {
+                display: block;
+            }
+        }
+    </style>
+<link rel="stylesheet" href="./libs/fonts.css">
+</head>
+<body>
+    <!-- Botão de toggle para mobile -->
+    <button class="mobile-toggle" onclick="toggleMobileControls()">⚙️</button>
+    
+    <!-- Indicador de modo offline -->
+    <div id="offline-indicator" style="
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: linear-gradient(45deg, #ff6b35, #f7931e);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        z-index: 10000;
+        display: none;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    ">
+        <span style="
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        "></span>
+        <span>Modo Offline</span>
+    </div>
+    
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+    
+    <script>
+        // Mostrar indicador offline
+        function updateOfflineIndicator() {
+            const indicator = document.getElementById('offline-indicator');
+            if (!navigator.onLine) {
+                indicator.style.display = 'flex';
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+        
+        window.addEventListener('online', updateOfflineIndicator);
+        window.addEventListener('offline', updateOfflineIndicator);
+        document.addEventListener('DOMContentLoaded', updateOfflineIndicator);
+    </script>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Carregando Linfócito 3D Ultra-Detalhado...</p>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <div class="controls">
+        <div class="control-group">
+            <h3>🔬 Visualização</h3>
+            <div class="button-group">
+                <button onclick="lymphocyte.updateViewMode('complete')">Completo</button>
+                <button onclick="lymphocyte.updateViewMode('nucleus')">Núcleo</button>
+                <button onclick="lymphocyte.updateViewMode('membrane')">Membrana</button>
+                <button onclick="lymphocyte.updateViewMode('receptors')">Receptores</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h3>🧬 Componentes</h3>
+            <div class="slider-container">
+                <label>Opacidade Geral <span class="value-display" id="opacityValue">0.8</span></label>
+                <input type="range" id="opacity" min="0.1" max="1" step="0.1" value="0.8" 
+                       oninput="lymphocyte.updateOpacity(this.value)">
+            </div>
+            <div class="slider-container">
+                <label>Rotação X <span class="value-display" id="rotationXValue">0°</span></label>
+                <input type="range" id="rotationX" min="0" max="360" step="1" value="0" 
+                       oninput="lymphocyte.updateRotation('x', this.value)">
+            </div>
+            <div class="slider-container">
+                <label>Rotação Y <span class="value-display" id="rotationYValue">0°</span></label>
+                <input type="range" id="rotationY" min="0" max="360" step="1" value="0" 
+                       oninput="lymphocyte.updateRotation('y', this.value)">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h3>⚡ Ativação Imune</h3>
+            <div class="slider-container">
+                <label>Nível de Ativação <span class="value-display" id="activationValue">0%</span></label>
+                <input type="range" id="activation" min="0" max="100" step="1" value="0" 
+                       oninput="lymphocyte.updateActivationLevel(this.value)">
+            </div>
+            <div class="button-group">
+                <button onclick="lymphocyte.simulateActivation()">Simular Ativação</button>
+                <button onclick="lymphocyte.resetActivation()">Reset</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h3>🔍 Análise</h3>
+            <div class="button-group">
+                <button onclick="lymphocyte.toggleCrossSection()">Corte Transversal</button>
+                <button onclick="lymphocyte.toggleMolecularFlow()">Fluxo Molecular</button>
+                <button onclick="lymphocyte.toggleEnergyFlow()">Fluxo Energético</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cross-section-panel">
+        <h3>📊 Estado de Ativação</h3>
+        <div class="activation-display">
+            <h4>Ativação Celular</h4>
+            <div class="activation-meter">
+                <div class="activation-fill" id="activationMeter"></div>
+            </div>
+            <p id="activationStatus">Linfócito em repouso</p>
+        </div>
+        <div class="activation-display">
+            <h4>Produção de Citocinas</h4>
+            <div class="activation-meter">
+                <div class="activation-fill" id="cytokineMeter"></div>
+            </div>
+            <p id="cytokineStatus">Produção basal</p>
+        </div>
+        <div class="activation-display">
+            <h4>Proliferação</h4>
+            <div class="activation-meter">
+                <div class="activation-fill" id="proliferationMeter"></div>
+            </div>
+            <p id="proliferationStatus">Fase G0</p>
+        </div>
+    </div>
+
+    <div class="info-panel">
+        <h4>🧬 Linfócito T Helper</h4>
+        <p>Visualização ultra-detalhada de um linfócito T helper em diferentes estados de ativação. 
+        Observe a complexa arquitetura celular, incluindo receptores de superfície, organelas 
+        especializadas e a dinâmica molecular durante a resposta imune. Use os controles para 
+        explorar diferentes aspectos da ativação imune e metabolismo celular.</p>
+    </div>
+
+    <script>
+        class LymphocyteUltra {
+            constructor() {
+                this.canvas = document.getElementById('canvas');
+                this.gl = null;
+                this.program = null;
+                
+                // Detecção de dispositivo móvel
+                this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                    (window.innerWidth <= 768);
+                
+                // Configurações otimizadas para mobile
+                this.performanceSettings = {
+                    particleCount: this.isMobile ? 300 : 800,
+                    renderQuality: this.isMobile ? 0.6 : 1.0,
+                    animationSpeed: this.isMobile ? 0.4 : 1.0,
+                    enableShadows: !this.isMobile,
+                    enableReflections: !this.isMobile,
+                    maxLights: this.isMobile ? 2 : 4
+                };
+                
+                console.log(`📱 Modo: ${this.isMobile ? 'Mobile' : 'Desktop'}`);
+                console.log('⚙️ Configurações de performance:', this.performanceSettings);
+                this.buffers = {};
+                this.uniforms = {};
+                this.viewMode = 'complete';
+                this.rotationX = 0;
+                this.rotationY = 0;
+                this.rotationZ = 0;
+                this.opacity = 0.8;
+                this.activationLevel = 0;
+                this.time = 0;
+                this.crossSectionEnabled = false;
+                this.molecularFlowEnabled = false;
+                this.energyFlowEnabled = false;
+                this.isActivating = false;
+                
+                // Componentes do linfócito
+                this.components = {
+                    cellBody: { visible: true, opacity: 1.0 },
+                    nucleus: { visible: true, opacity: 1.0 },
+                    nucleolus: { visible: true, opacity: 1.0 },
+                    membrane: { visible: true, opacity: 1.0 },
+                    tcrReceptors: { visible: true, opacity: 1.0 },
+                    cd4Receptors: { visible: true, opacity: 1.0 },
+                    mitochondria: { visible: true, opacity: 1.0 },
+                    endoplasmicReticulum: { visible: true, opacity: 1.0 },
+                    golgiApparatus: { visible: true, opacity: 1.0 },
+                    ribosomes: { visible: true, opacity: 1.0 },
+                    cytokineVesicles: { visible: true, opacity: 1.0 },
+                    immunologicalSynapse: { visible: true, opacity: 1.0 }
+                };
+                
+                this.init();
+            }
+
+            init() {
+                this.setupCanvas();
+                this.setupWebGL();
+                this.setupShaders();
+                this.createGeometry();
+                this.setupEventListeners();
+                this.animate();
+                
+                // Esconder loading
+                document.getElementById('loading').style.display = 'none';
+            }
+
+            setupCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            setupWebGL() {
+                this.gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
+                if (!this.gl) {
+                    alert('WebGL não suportado neste navegador');
+                    return;
+                }
+
+                this.gl.enable(this.gl.DEPTH_TEST);
+                this.gl.enable(this.gl.BLEND);
+                this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+                this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+            }
+
+            setupShaders() {
+                const vertexShaderSource = `
+                    precision mediump float;
+                    attribute vec3 position;
+                    attribute vec3 normal;
+                    attribute vec2 texCoord;
+                    
+                    uniform mat4 modelMatrix;
+                    uniform mat4 viewMatrix;
+                    uniform mat4 projectionMatrix;
+                    uniform float time;
+                    uniform float activationLevel;
+                    uniform vec3 componentOffset;
+                    
+                    varying vec3 vNormal;
+                    varying vec3 vPosition;
+                    varying vec2 vTexCoord;
+                    varying float vActivation;
+                    
+                    void main() {
+                        vec3 pos = position + componentOffset;
+                        
+                        // Efeito de ativação - expansão e vibração
+                        float activation = activationLevel / 100.0;
+                        pos *= (1.0 + activation * 0.2);
+                        pos += normal * sin(time * 3.0 + pos.x * 10.0) * activation * 0.02;
+                        
+                        vec4 worldPosition = modelMatrix * vec4(pos, 1.0);
+                        gl_Position = projectionMatrix * viewMatrix * worldPosition;
+                        
+                        vNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+                        vPosition = worldPosition.xyz;
+                        vTexCoord = texCoord;
+                        vActivation = activation;
+                    }
+                `;
+
+                const fragmentShaderSource = `
+                    precision mediump float;
+                    
+                    varying vec3 vNormal;
+                    varying vec3 vPosition;
+                    varying vec2 vTexCoord;
+                    varying float vActivation;
+                    
+                    uniform vec3 lightPosition;
+                    uniform vec3 cameraPosition;
+                    uniform vec3 componentColor;
+                    uniform float opacity;
+                    uniform float time;
+                    uniform bool crossSectionEnabled;
+                    uniform float crossSectionY;
+                    uniform bool molecularFlowEnabled;
+                    uniform bool energyFlowEnabled;
+                    
+                    void main() {
+                        // Corte transversal
+                        if (crossSectionEnabled && vPosition.y > crossSectionY) {
+                            discard;
+                        }
+                        
+                        vec3 normal = normalize(vNormal);
+                        vec3 lightDir = normalize(lightPosition - vPosition);
+                        vec3 viewDir = normalize(cameraPosition - vPosition);
+                        vec3 reflectDir = reflect(-lightDir, normal);
+                        
+                        // Iluminação básica
+                        float ambient = 0.3;
+                        float diffuse = max(dot(normal, lightDir), 0.0);
+                        float specular = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+                        
+                        vec3 color = componentColor;
+                        
+                        // Efeito de ativação - mudança de cor
+                        color = mix(color, vec3(1.0, 0.3, 0.3), vActivation * 0.5);
+                        
+                        // Fluxo molecular
+                        if (molecularFlowEnabled) {
+                            float flow = sin(time * 2.0 + vPosition.x * 5.0 + vPosition.z * 5.0) * 0.5 + 0.5;
+                            color += vec3(0.0, 0.3, 0.6) * flow * 0.3;
+                        }
+                        
+                        // Fluxo energético
+                        if (energyFlowEnabled) {
+                            float energy = sin(time * 4.0 + length(vPosition) * 8.0) * 0.5 + 0.5;
+                            color += vec3(1.0, 1.0, 0.0) * energy * vActivation * 0.4;
+                        }
+                        
+                        vec3 finalColor = color * (ambient + diffuse) + vec3(1.0) * specular * 0.5;
+                        
+                        // Efeito de brilho durante ativação
+                        float glow = vActivation * (sin(time * 6.0) * 0.3 + 0.7);
+                        finalColor += vec3(0.2, 0.6, 1.0) * glow * 0.3;
+                        
+                        gl_FragColor = vec4(finalColor, opacity);
+                    }
+                `;
+
+                const vertexShader = this.createShader(this.gl.VERTEX_SHADER, vertexShaderSource);
+                const fragmentShader = this.createShader(this.gl.FRAGMENT_SHADER, fragmentShaderSource);
+                
+                this.program = this.createProgram(vertexShader, fragmentShader);
+                this.gl.useProgram(this.program);
+                
+                // Obter localizações dos uniforms
+                this.uniforms = {
+                    modelMatrix: this.gl.getUniformLocation(this.program, 'modelMatrix'),
+                    viewMatrix: this.gl.getUniformLocation(this.program, 'viewMatrix'),
+                    projectionMatrix: this.gl.getUniformLocation(this.program, 'projectionMatrix'),
+                    lightPosition: this.gl.getUniformLocation(this.program, 'lightPosition'),
+                    cameraPosition: this.gl.getUniformLocation(this.program, 'cameraPosition'),
+                    componentColor: this.gl.getUniformLocation(this.program, 'componentColor'),
+                    componentOffset: this.gl.getUniformLocation(this.program, 'componentOffset'),
+                    opacity: this.gl.getUniformLocation(this.program, 'opacity'),
+                    time: this.gl.getUniformLocation(this.program, 'time'),
+                    activationLevel: this.gl.getUniformLocation(this.program, 'activationLevel'),
+                    crossSectionEnabled: this.gl.getUniformLocation(this.program, 'crossSectionEnabled'),
+                    crossSectionY: this.gl.getUniformLocation(this.program, 'crossSectionY'),
+                    molecularFlowEnabled: this.gl.getUniformLocation(this.program, 'molecularFlowEnabled'),
+                    energyFlowEnabled: this.gl.getUniformLocation(this.program, 'energyFlowEnabled')
+                };
+            }
+
+            createShader(type, source) {
+                const shader = this.gl.createShader(type);
+                this.gl.shaderSource(shader, source);
+                this.gl.compileShader(shader);
+                
+                if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+                    console.error('Erro ao compilar shader:', this.gl.getShaderInfoLog(shader));
+                    this.gl.deleteShader(shader);
+                    return null;
+                }
+                
+                return shader;
+            }
+
+            createProgram(vertexShader, fragmentShader) {
+                const program = this.gl.createProgram();
+                this.gl.attachShader(program, vertexShader);
+                this.gl.attachShader(program, fragmentShader);
+                this.gl.linkProgram(program);
+                
+                if (!this.gl.getProgramParameter(program, this.gl.LINK_STATUS)) {
+                    console.error('Erro ao linkar programa:', this.gl.getProgramInfoLog(program));
+                    this.gl.deleteProgram(program);
+                    return null;
+                }
+                
+                return program;
+            }
+
+            createGeometry() {
+                // Criar geometrias dos componentes do linfócito
+                this.createLymphocyteGeometry();
+                this.createNucleusGeometry();
+                this.createMembraneGeometry();
+                this.createTCRReceptorsGeometry();
+                this.createCD4ReceptorsGeometry();
+                this.createMitochondriaGeometry();
+                this.createEndoplasmicReticulumGeometry();
+                this.createGolgiApparatusGeometry();
+                this.createRibosomesGeometry();
+                this.createCytokineVesiclesGeometry();
+                this.createImmunologicalSynapseGeometry();
+            }
+
+            createLymphocyteGeometry() {
+                const vertices = [];
+                const normals = [];
+                const indices = [];
+                
+                // Criar esfera para o corpo celular
+                const radius = 1.0;
+                const segments = 32;
+                const rings = 16;
+                
+                for (let ring = 0; ring <= rings; ring++) {
+                    const phi = (ring / rings) * Math.PI;
+                    const sinPhi = Math.sin(phi);
+                    const cosPhi = Math.cos(phi);
+                    
+                    for (let segment = 0; segment <= segments; segment++) {
+                        const theta = (segment / segments) * 2 * Math.PI;
+                        const sinTheta = Math.sin(theta);
+                        const cosTheta = Math.cos(theta);
+                        
+                        const x = radius * sinPhi * cosTheta;
+                        const y = radius * cosPhi;
+                        const z = radius * sinPhi * sinTheta;
+                        
+                        vertices.push(x, y, z);
+                        normals.push(x / radius, y / radius, z / radius);
+                        
+                        if (ring < rings && segment < segments) {
+                            const current = ring * (segments + 1) + segment;
+                            const next = current + segments + 1;
+                            
+                            indices.push(current, next, current + 1);
+                            indices.push(next, next + 1, current + 1);
+                        }
+                    }
+                }
+                
+                this.buffers.cellBody = this.createBuffer(vertices, normals, indices);
+            }
+
+            createNucleusGeometry() {
+                const vertices = [];
+                const normals = [];
+                const indices = [];
+                
+                // Núcleo - esfera menor no centro
+                const radius = 0.4;
+                const segments = 24;
+                const rings = 12;
+                
+                for (let ring = 0; ring <= rings; ring++) {
+                    const phi = (ring / rings) * Math.PI;
+                    const sinPhi = Math.sin(phi);
+                    const cosPhi = Math.cos(phi);
+                    
+                    for (let segment = 0; segment <= segments; segment++) {
+                        const theta = (segment / segments) * 2 * Math.PI;
+                        const sinTheta = Math.sin(theta);
+                        const cosTheta = Math.cos(theta);
+                        
+                        const x = radius * sinPhi * cosTheta;
+                        const y = radius * cosPhi;
+                        const z = radius * sinPhi * sinTheta;
+                        
+                        vertices.push(x, y, z);
+                        normals.push(x / radius, y / radius, z / radius);
+                        
+                        if (ring < rings && segment < segments) {
+                            const current = ring * (segments + 1) + segment;
+                            const next = current + segments + 1;
+                            
+                            indices.push(current, next, current + 1);
+                            indices.push(next, next + 1, current + 1);
+                        }
+                    }
+                }
+                
+                this.buffers.nucleus = this.createBuffer(vertices, normals, indices);
+            }
+
+            createMembraneGeometry() {
+                const vertices = [];
+                const normals = [];
+                const indices = [];
+                
+                // Membrana celular - esfera ligeiramente maior
+                const radius = 1.02;
+                const segments = 40;
+                const rings = 20;
+                
+                for (let ring = 0; ring <= rings; ring++) {
+                    const phi = (ring / rings) * Math.PI;
+                    const sinPhi = Math.sin(phi);
+                    const cosPhi = Math.cos(phi);
+                    
+                    for (let segment = 0; segment <= segments; segment++) {
+                        const theta = (segment / segments) * 2 * Math.PI;
+                        const sinTheta = Math.sin(theta);
+                        const cosTheta = Math.cos(theta);
+                        
+                        // Adicionar rugosidade à membrana
+                        const noise = Math.sin(theta * 8) * Math.sin(phi * 6) * 0.02;
+                        const r = radius + noise;
+                        
+                        const x = r * sinPhi * cosTheta;
+                        const y = r * cosPhi;
+                        const z = r * sinPhi * sinTheta;
+                        
+                        vertices.push(x, y, z);
+                        normals.push(x / r, y / r, z / r);
+                        
+                        if (ring < rings && segment < segments) {
+                            const current = ring * (segments + 1) + segment;
+                            const next = current + segments + 1;
+                            
+                            indices.push(current, next, current + 1);
+                            indices.push(next, next + 1, current + 1);
+                        }
+                    }
+                }
+                
+                this.buffers.membrane = this.createBuffer(vertices, normals, indices);
+            }
+
+            createTCRReceptorsGeometry() {
+                const vertices = [];
+                const normals = [];
+                const indices = [];
+                
+                // Receptores TCR - pequenas estruturas na superfície
+                const numReceptors = 200;
+                const baseRadius = 1.01;
+                
+                for (let i = 0; i < numReceptors; i++) {
+                    const theta = Math.random() * 2 * Math.PI;
+                    const phi = Math.random() * Math.PI;
+                    
+                    const x = baseRadius * Math.sin(phi) * Math.cos(theta);
+                    const y = baseRadius * Math.cos(phi);
+                    const z = baseRadius * Math.sin(phi) * Math.sin(theta);
+                    
+                    // Criar pequeno cilindro para cada receptor
+                    const height = 0.05;
+                    const radius = 0.01;
+                    const segments = 8;
+                    
+                    const normal = [x / baseRadius, y / baseRadius, z / baseRadius];
+                    
+                    for (let j = 0; j <= segments; j++) {
+                        const angle = (j / segments) * 2 * Math.PI;
+                        const cos = Math.cos(angle);
+                        const sin = Math.sin(angle);
+                        
+                        // Base
+                        vertices.push(
+                            x + radius * cos,
+                            y + radius * sin,
+                            z
+                        );
+                        normals.push(normal[0], normal[1], normal[2]);
+                        
+                        // Topo
+                        vertices.push(
+                            x + radius * cos + normal[0] * height,
+                            y + radius * sin + normal[1] * height,
+                            z + normal[2] * height
+                        );
+                        normals.push(normal[0], normal[1], normal[2]);
+                        
+                        if (j < segments) {
+                            const base = i * (segments + 1) * 2 + j * 2;
+                            indices.push(base, base + 2, base + 1);
+                            indices.push(base + 1, base + 2, base + 3);
+                        }
+                    }
+                }
+                
+                this.buffers.tcrReceptors = this.createBuffer(vertices, normals, indices);
+            }
+
+            createCD4ReceptorsGeometry() {
+                const vertices = [];
+                const normals = [];
+                const indices = [];
+                
+                // Receptores CD4 - estruturas específicas
+                const numReceptors = 150;
+                const baseRadius = 1.015;
+                
+                for (let i = 0; i < numReceptors; i++) {
+                    const theta = Math.random() * 2 * Math.PI;
+                    const phi = Math.random() * Math.PI;
+                    
+                    const x = baseRadius * Math.sin(phi) * Math.cos(theta);
+                    const y = baseRadius * Math.cos(phi);
+                    const z = baseRadius * Math.sin(phi) * Math.sin(theta);
+                    
+                    // Criar estrutura em Y para CD4
+                    const height = 0.08;
+                    const radius = 0.015;
+                    
+                    const normal = [x / baseRadius, y / baseRadius, z / baseRadius];
+                    
+                    // Haste principal
+                    vertices.push(x, y, z);
+                    vertices.push(x + normal[0] * height, y + normal[1] * height, z + normal[2] * height);
+                    normals.push(normal[0], normal[1], normal[2]);
+                    normals.push(normal[0], normal[1], normal[2]);
+                    
+                    // Ramificações
+                    const branch1 = [normal[0] + 0.3, normal[1], normal[2]];
+                    const branch2 = [normal[0] - 0.3, normal[1], normal[2]];
+                    
+                    vertices.push(
+                        x + normal[0] * height + branch1[0] * height * 0.5,
+                        y + normal[1] * height + branch1[1] * height * 0.5,
+                        z + normal[2] * height + branch1[2] * height * 0.5
+                    );
+                    vertices.push(
+                        x + normal[0] * height + branch2[0] * height * 0.5,
+                        y + normal[1] * height + branch2[1] * height * 0.5,
+                        z + normal[2] * height + branch2[2] * height * 0.5
+                    );
+                    
+                    normals.push(branch1[0], branch1[1], branch1[2]);
+                    normals.push(branch2[0], branch2[1], branch2[2]);
+                    
+                    const base = i * 4;
+                    indices.push(base, base + 1, base + 2);
+                    indices.push(base, base + 1, base + 3);
+                }
+                
+                this.buffers.cd4Receptors = this.createBuffer(vertices, normals, indices);
+            }
+
+            createMitochondriaGeometry() {
+                const vertices = [];
+                const normals = [];
+                const indices = [];
+                
+                // Mitocôndrias - estruturas ovais no citoplasma
+                const numMitochondria = 50;
+                
+                for (let m = 0; m < numMitochondria; m++) {
+                    // Posição aleatória no citoplasma
+                    const angle = Math.random() * 2 * Math.PI;
+                    const radius = 0.3 + Math.random() * 0.4;
+                    const height = (Math.random() - 0.5) * 0.6;
+                    
+                    const centerX = radius * Math.cos(angle);
+                    const centerY = height;
+                    const centerZ = radius * Math.sin(angle);
+                    
+                    // Criar elipsoide
+                    const a = 0.08; // raio x
+                    const b = 0.04; // raio y
+                    const c = 0.06; // raio z
+                    
+                    const segments = 12;
+                    const rings = 8;
+                    
+                    for (let ring = 0; ring <= rings; ring++) {
+                        const phi = (ring / rings) * Math.PI;
+                        const sinPhi = Math.sin(phi);
+                        const cosPhi = Math.cos(phi);
+                        
+                        for (let segment = 0; segment <= segments; segment++) {
+                            const theta = (segment / segments) * 2 * Math.PI;
+                            const sinTheta = Math.sin(theta);
+                            const cosTheta = Math.cos(theta);
+                            
+                            const x = centerX + a * sinPhi * cosTheta;
+                            const y = centerY + b * cosPhi;
+                            const z = centerZ + c * sinPhi * sinTheta;
+                            
+                            vertices.push(x, y, z);
+                            normals.push(
+                                (x - centerX) / a,
+                                (y - centerY) / b,
+                                (z - centerZ) / c
+                            );
+                            
+                            if (ring < rings && segment < segments) {
+                                const current = (m * (rings + 1) + ring) * (segments + 1) + segment;
+                                const next = current + segments + 1;
+                                
+                                indices.push(current, next, current + 1);
+                                indices.push(next, next + 1, current + 1);
+                            }
+                        }
+                    }
+                }
+                
+                this.buffers.mitochondria = this.createBuffer(vertices, normals, indices);
+            }
+
+            createEndoplasmicReticulumGeometry() {
+                const vertices = [];
+                const normals = [];
+                const indices = [];
+                
+                // Retículo endoplasmático - rede tubular
+                const numTubes = 30;
+                
+                for (let t = 0; t < numTubes; t++) {
+                    const startAngle = Math.random() * 2 * Math.PI;
+                    const startRadius = 0.2 + Math.random() * 0.3;
+                    const startHeight = (Math.random() - 0.5) * 0.4;
+                    
+                    const startX = startRadius * Math.cos(startAngle);
+                    const startY = startHeight;
+                    const startZ = startRadius * Math.sin(startAngle);
+                    
+                    const endAngle = startAngle + (Math.random() - 0.5) * Math.PI;
+                    const endRadius = 0.2 + Math.random() * 0.3;
+                    const endHeight = startHeight + (Math.random() - 0.5) * 0.2;
+                    
+                    const endX = endRadius * Math.cos(endAngle);
+                    const endY = endHeight;
+                    const endZ = endRadius * Math.sin(endAngle);
+                    
+                    // Criar tubo entre start e end
+                    const segments = 8;
+                    const tubeRadius = 0.01;
+                    
+                    const direction = [endX - startX, endY - startY, endZ - startZ];
+                    const length = Math.sqrt(direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2]);
+                    direction[0] /= length;
+                    direction[1] /= length;
+                    direction[2] /= length;
+                    
+                    for (let i = 0; i <= 10; i++) {
+                        const t = i / 10;
+                        const x = startX + direction[0] * length * t;
+                        const y = startY + direction[1] * length * t;
+                        const z = startZ + direction[2] * length * t;
+                        
+                        for (let j = 0; j < segments; j++) {
+                            const angle = (j / segments) * 2 * Math.PI;
+                            const cos = Math.cos(angle);
+                            const sin = Math.sin(angle);
+                            
+                            // Perpendicular ao direction
+                            const perpX = -direction[2] * cos + direction[1] * sin;
+                            const perpY = direction[2] * sin - direction[0] * cos;
+                            const perpZ = direction[0] * cos - direction[1] * sin;
+                            
+                            vertices.push(
+                                x + perpX * tubeRadius,
+                                y + perpY * tubeRadius,
+                                z + perpZ * tubeRadius
+                            );
+                            normals.push(perpX, perpY, perpZ);
+                            
+                            if (i < 10) {
+                                const current = (t * 11 + i) * segments + j;
+                                const next = current + segments;
+                                const nextJ = (j + 1) % segments;
+                                
+                                indices.push(current, next, current + nextJ);
+                                indices.push(next, next + nextJ, current + nextJ);
+                            }
+                        }
+                    }
+                }
+                
+                this.buffers.endoplasmicReticulum = this.createBuffer(vertices, normals, indices);
+            }
+
+            createGolgiApparatusGeometry() {
+                const vertices = [];
+                const normals = [];
+                const indices = [];
+                
+                // Aparelho de Golgi - pilhas de cisternas
+                const numStacks = 6;
+                const stackSpacing = 0.02;
+                
+                for (let stack = 0; stack < numStacks; stack++) {
+                    const y = -0.1 + stack * stackSpacing;
+                    const radius = 0.15 - stack * 0.01;
+                    const segments = 16;
+                    
+                    // Criar cisterna (disco curvado)
+                    for (let segment = 0; segment <= segments; segment++) {
+                        const angle = (segment / segments) * 2 * Math.PI;
+                        const x = radius * Math.cos(angle);
+                        const z = radius * Math.sin(angle);
+                        
+                        // Curvatura da cisterna
+                        const curve = Math.sin(angle * 2) * 0.02;
+                        
+                        // Face superior
+                        vertices.push(x, y + 0.005 + curve, z);
+                        normals.push(0, 1, 0);
+                        
+                        // Face inferior
+                        vertices.push(x, y - 0.005 + curve, z);
+                        normals.push(0, -1, 0);
+                        
+                        if (segment < segments) {
+                            const base = stack * (segments + 1) * 2 + segment * 2;
+                            
+                            // Conectar faces
+                            indices.push(base, base + 2, base + 1);
+                            indices.push(base + 1, base + 2, base + 3);
+                        }
+                    }
+                }
+                
+                this.buffers.golgiApparatus = this.createBuffer(vertices, normals, indices);
+            }
+
+            createRibosomesGeometry() {
+                const vertices = [];
+                const normals = [];
+                const indices = [];
+                
+                // Ribossomos - pequenas esferas no citoplasma e RE
+                const numRibosomes = 300;
+                
+                for (let r = 0; r < numRibosomes; r++) {
+                    // Posição aleatória
+                    const angle = Math.random() * 2 * Math.PI;
+                    const radius = 0.2 + Math.random() * 0.6;
+                    const height = (Math.random() - 0.5) * 0.8;
+                    
+                    const centerX = radius * Math.cos(angle);
+                    const centerY = height;
+                    const centerZ = radius * Math.sin(angle);
+                    
+                    // Criar pequena esfera
+                    const ribosomeRadius = 0.008;
+                    const segments = 6;
+                    const rings = 4;
+                    
+                    for (let ring = 0; ring <= rings; ring++) {
+                        const phi = (ring / rings) * Math.PI;
+                        const sinPhi = Math.sin(phi);
+                        const cosPhi = Math.cos(phi);
+                        
+                        for (let segment = 0; segment <= segments; segment++) {
+                            const theta = (segment / segments) * 2 * Math.PI;
+                            const sinTheta = Math.sin(theta);
+                            const cosTheta = Math.cos(theta);
+                            
+                            const x = centerX + ribosomeRadius * sinPhi * cosTheta;
+                            const y = centerY + ribosomeRadius * cosPhi;
+                            const z = centerZ + ribosomeRadius * sinPhi * sinTheta;
+                            
+                            vertices.push(x, y, z);
+                            normals.push(
+                                (x - centerX) / ribosomeRadius,
+                                (y - centerY) / ribosomeRadius,
+                                (z - centerZ) / ribosomeRadius
+                            );
+                            
+                            if (ring < rings && segment < segments) {
+                                const current = (r * (rings + 1) + ring) * (segments + 1) + segment;
+                                const next = current + segments + 1;
+                                
+                                indices.push(current, next, current + 1);
+                                indices.push(next, next + 1, current + 1);
+                            }
+                        }
+                    }
+                }
+                
+                this.buffers.ribosomes = this.createBuffer(vertices, normals, indices);
+            }
+
+            createCytokineVesiclesGeometry() {
+                const vertices = [];
+                const normals = [];
+                const indices = [];
+                
+                // Vesículas de citocinas - pequenas esferas próximas à membrana
+                const numVesicles = 80;
+                
+                for (let v = 0; v < numVesicles; v++) {
+                    const angle = Math.random() * 2 * Math.PI;
+                    const phi = Math.random() * Math.PI;
+                    const radius = 0.7 + Math.random() * 0.2;
+                    
+                    const centerX = radius * Math.sin(phi) * Math.cos(angle);
+                    const centerY = radius * Math.cos(phi);
+                    const centerZ = radius * Math.sin(phi) * Math.sin(angle);
+                    
+                    // Criar vesícula
+                    const vesicleRadius = 0.02 + Math.random() * 0.01;
+                    const segments = 8;
+                    const rings = 6;
+                    
+                    for (let ring = 0; ring <= rings; ring++) {
+                        const phi = (ring / rings) * Math.PI;
+                        const sinPhi = Math.sin(phi);
+                        const cosPhi = Math.cos(phi);
+                        
+                        for (let segment = 0; segment <= segments; segment++) {
+                            const theta = (segment / segments) * 2 * Math.PI;
+                            const sinTheta = Math.sin(theta);
+                            const cosTheta = Math.cos(theta);
+                            
+                            const x = centerX + vesicleRadius * sinPhi * cosTheta;
+                            const y = centerY + vesicleRadius * cosPhi;
+                            const z = centerZ + vesicleRadius * sinPhi * sinTheta;
+                            
+                            vertices.push(x, y, z);
+                            normals.push(
+                                (x - centerX) / vesicleRadius,
+                                (y - centerY) / vesicleRadius,
+                                (z - centerZ) / vesicleRadius
+                            );
+                            
+                            if (ring < rings && segment < segments) {
+                                const current = (v * (rings + 1) + ring) * (segments + 1) + segment;
+                                const next = current + segments + 1;
+                                
+                                indices.push(current, next, current + 1);
+                                indices.push(next, next + 1, current + 1);
+                            }
+                        }
+                    }
+                }
+                
+                this.buffers.cytokineVesicles = this.createBuffer(vertices, normals, indices);
+            }
+
+            createImmunologicalSynapseGeometry() {
+                const vertices = [];
+                const normals = [];
+                const indices = [];
+                
+                // Sinapse imunológica - área especializada da membrana
+                const centerX = 0;
+                const centerY = 0;
+                const centerZ = 1.05;
+                const synapseRadius = 0.2;
+                const segments = 20;
+                const rings = 10;
+                
+                for (let ring = 0; ring <= rings; ring++) {
+                    const r = (ring / rings) * synapseRadius;
+                    
+                    for (let segment = 0; segment <= segments; segment++) {
+                        const angle = (segment / segments) * 2 * Math.PI;
+                        const x = centerX + r * Math.cos(angle);
+                        const y = centerY + r * Math.sin(angle);
+                        const z = centerZ + Math.sin(r * 10) * 0.02; // Ondulação
+                        
+                        vertices.push(x, y, z);
+                        normals.push(0, 0, 1);
+                        
+                        if (ring < rings && segment < segments) {
+                            const current = ring * (segments + 1) + segment;
+                            const next = current + segments + 1;
+                            
+                            indices.push(current, next, current + 1);
+                            indices.push(next, next + 1, current + 1);
+                        }
+                    }
+                }
+                
+                this.buffers.immunologicalSynapse = this.createBuffer(vertices, normals, indices);
+            }
+
+            createBuffer(vertices, normals, indices) {
+                const positionBuffer = this.gl.createBuffer();
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer);
+                this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(vertices), this.gl.STATIC_DRAW);
+                
+                const normalBuffer = this.gl.createBuffer();
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, normalBuffer);
+                this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(normals), this.gl.STATIC_DRAW);
+                
+                const indexBuffer = this.gl.createBuffer();
+                this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+                this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), this.gl.STATIC_DRAW);
+                
+                return {
+                    position: positionBuffer,
+                    normal: normalBuffer,
+                    indices: indexBuffer,
+                    indexCount: indices.length
+                };
+            }
+
+            setupEventListeners() {
+                let isDragging = false;
+                let lastMouseX = 0;
+                let lastMouseY = 0;
+                
+                this.canvas.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                });
+                
+                this.canvas.addEventListener('mousemove', (e) => {
+                    if (isDragging) {
+                        const deltaX = e.clientX - lastMouseX;
+                        const deltaY = e.clientY - lastMouseY;
+                        
+                        this.rotationY += deltaX * 0.01;
+                        this.rotationX += deltaY * 0.01;
+                        
+                        lastMouseX = e.clientX;
+                        lastMouseY = e.clientY;
+                    }
+                });
+                
+                this.canvas.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
+                
+                this.canvas.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    // Zoom functionality could be added here
+                });
+                
+                window.addEventListener('resize', () => {
+                    this.canvas.width = window.innerWidth;
+                    this.canvas.height = window.innerHeight;
+                    this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+                });
+                
+                // Controles de interface
+                document.getElementById('opacity').addEventListener('input', (e) => {
+                    this.updateOpacity(parseFloat(e.target.value));
+                });
+                
+                document.getElementById('rotationX').addEventListener('input', (e) => {
+                    this.updateRotation('x', parseFloat(e.target.value));
+                });
+                
+                document.getElementById('rotationY').addEventListener('input', (e) => {
+                    this.updateRotation('y', parseFloat(e.target.value));
+                });
+                
+                document.getElementById('activation').addEventListener('input', (e) => {
+                    this.updateActivationLevel(parseFloat(e.target.value));
+                });
+            }
+
+            updateViewMode(mode) {
+                this.viewMode = mode;
+                
+                // Resetar visibilidade
+                Object.keys(this.components).forEach(key => {
+                    this.components[key].visible = false;
+                });
+                
+                switch (mode) {
+                    case 'complete':
+                        Object.keys(this.components).forEach(key => {
+                            this.components[key].visible = true;
+                        });
+                        break;
+                    case 'nucleus':
+                        this.components.nucleus.visible = true;
+                        this.components.nucleolus.visible = true;
+                        break;
+                    case 'membrane':
+                        this.components.membrane.visible = true;
+                        this.components.tcrReceptors.visible = true;
+                        this.components.cd4Receptors.visible = true;
+                        this.components.immunologicalSynapse.visible = true;
+                        break;
+                    case 'receptors':
+                        this.components.tcrReceptors.visible = true;
+                        this.components.cd4Receptors.visible = true;
+                        break;
+                }
+            }
+
+            updateOpacity(value) {
+                this.opacity = value;
+                document.getElementById('opacityValue').textContent = value;
+            }
+
+            updateRotation(axis, value) {
+                const radians = (value * Math.PI) / 180;
+                if (axis === 'x') {
+                    this.rotationX = radians;
+                    document.getElementById('rotationXValue').textContent = value + '°';
+                } else if (axis === 'y') {
+                    this.rotationY = radians;
+                    document.getElementById('rotationYValue').textContent = value + '°';
+                }
+            }
+
+            updateActivationLevel(value) {
+                this.activationLevel = value;
+                document.getElementById('activationValue').textContent = value + '%';
+                this.updateActivationDisplays();
+            }
+
+            updateActivationDisplays() {
+                const activation = this.activationLevel;
+                
+                // Atualizar medidores
+                document.getElementById('activationMeter').style.width = activation + '%';
+                document.getElementById('cytokineMeter').style.width = Math.min(activation * 1.2, 100) + '%';
+                document.getElementById('proliferationMeter').style.width = Math.max(0, activation - 20) + '%';
+                
+                // Atualizar status
+                let activationStatus = 'Linfócito em repouso';
+                let cytokineStatus = 'Produção basal';
+                let proliferationStatus = 'Fase G0';
+                
+                if (activation > 20) {
+                    activationStatus = 'Reconhecimento de antígeno';
+                    cytokineStatus = 'Início da produção';
+                }
+                if (activation > 40) {
+                    activationStatus = 'Ativação inicial';
+                    cytokineStatus = 'Produção moderada';
+                }
+                if (activation > 60) {
+                    activationStatus = 'Ativação completa';
+                    cytokineStatus = 'Produção intensa';
+                    proliferationStatus = 'Entrada em ciclo';
+                }
+                if (activation > 80) {
+                    activationStatus = 'Diferenciação';
+                    cytokineStatus = 'Produção máxima';
+                    proliferationStatus = 'Proliferação ativa';
+                }
+                
+                document.getElementById('activationStatus').textContent = activationStatus;
+                document.getElementById('cytokineStatus').textContent = cytokineStatus;
+                document.getElementById('proliferationStatus').textContent = proliferationStatus;
+            }
+
+            simulateActivation() {
+                if (this.isActivating) return;
+                
+                this.isActivating = true;
+                const startLevel = this.activationLevel;
+                const targetLevel = 100;
+                const duration = 3000; // 3 segundos
+                const startTime = Date.now();
+                
+                const animate = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    // Curva de ativação sigmóide
+                    const sigmoid = 1 / (1 + Math.exp(-10 * (progress - 0.5)));
+                    const currentLevel = startLevel + (targetLevel - startLevel) * sigmoid;
+                    
+                    this.updateActivationLevel(Math.round(currentLevel));
+                    document.getElementById('activation').value = currentLevel;
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        this.isActivating = false;
+                    }
+                };
+                
+                animate();
+            }
+
+            resetActivation() {
+                this.activationLevel = 0;
+                this.updateActivationLevel(0);
+                document.getElementById('activation').value = 0;
+                this.isActivating = false;
+            }
+
+            toggleCrossSection() {
+                this.crossSectionEnabled = !this.crossSectionEnabled;
+            }
+
+            toggleMolecularFlow() {
+                this.molecularFlowEnabled = !this.molecularFlowEnabled;
+            }
+
+            toggleEnergyFlow() {
+                this.energyFlowEnabled = !this.energyFlowEnabled;
+            }
+
+            updateProjectionMatrix() {
+                const aspect = this.canvas.width / this.canvas.height;
+                const fov = 45 * Math.PI / 180;
+                const near = 0.1;
+                const far = 100;
+                
+                return this.createPerspectiveMatrix(fov, aspect, near, far);
+            }
+
+            createPerspectiveMatrix(fov, aspect, near, far) {
+                const f = 1.0 / Math.tan(fov / 2);
+                const rangeInv = 1 / (near - far);
+                
+                return [
+                    f / aspect, 0, 0, 0,
+                    0, f, 0, 0,
+                    0, 0, (near + far) * rangeInv, -1,
+                    0, 0, near * far * rangeInv * 2, 0
+                ];
+            }
+
+            createViewMatrix() {
+                const eye = [0, 0, 3];
+                const center = [0, 0, 0];
+                const up = [0, 1, 0];
+                
+                const zAxis = [
+                    eye[0] - center[0],
+                    eye[1] - center[1],
+                    eye[2] - center[2]
+                ];
+                const zLength = Math.sqrt(zAxis[0] * zAxis[0] + zAxis[1] * zAxis[1] + zAxis[2] * zAxis[2]);
+                zAxis[0] /= zLength;
+                zAxis[1] /= zLength;
+                zAxis[2] /= zLength;
+                
+                const xAxis = [
+                    up[1] * zAxis[2] - up[2] * zAxis[1],
+                    up[2] * zAxis[0] - up[0] * zAxis[2],
+                    up[0] * zAxis[1] - up[1] * zAxis[0]
+                ];
+                const xLength = Math.sqrt(xAxis[0] * xAxis[0] + xAxis[1] * xAxis[1] + xAxis[2] * xAxis[2]);
+                xAxis[0] /= xLength;
+                xAxis[1] /= xLength;
+                xAxis[2] /= xLength;
+                
+                const yAxis = [
+                    zAxis[1] * xAxis[2] - zAxis[2] * xAxis[1],
+                    zAxis[2] * xAxis[0] - zAxis[0] * xAxis[2],
+                    zAxis[0] * xAxis[1] - zAxis[1] * xAxis[0]
+                ];
+                
+                return [
+                    xAxis[0], yAxis[0], zAxis[0], 0,
+                    xAxis[1], yAxis[1], zAxis[1], 0,
+                    xAxis[2], yAxis[2], zAxis[2], 0,
+                    -(xAxis[0] * eye[0] + xAxis[1] * eye[1] + xAxis[2] * eye[2]),
+                    -(yAxis[0] * eye[0] + yAxis[1] * eye[1] + yAxis[2] * eye[2]),
+                    -(zAxis[0] * eye[0] + zAxis[1] * eye[1] + zAxis[2] * eye[2]),
+                    1
+                ];
+            }
+
+            multiplyMatrices(a, b) {
+                const result = new Array(16);
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+                        result[i * 4 + j] = 0;
+                        for (let k = 0; k < 4; k++) {
+                            result[i * 4 + j] += a[i * 4 + k] * b[k * 4 + j];
+                        }
+                    }
+                }
+                return result;
+            }
+
+            render() {
+                this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+                
+                // Matrizes de transformação
+                const projectionMatrix = this.updateProjectionMatrix();
+                const viewMatrix = this.createViewMatrix();
+                
+                // Matriz de rotação
+                const cosX = Math.cos(this.rotationX);
+                const sinX = Math.sin(this.rotationX);
+                const cosY = Math.cos(this.rotationY);
+                const sinY = Math.sin(this.rotationY);
+                
+                const rotationMatrix = [
+                    cosY, 0, sinY, 0,
+                    sinX * sinY, cosX, -sinX * cosY, 0,
+                    -cosX * sinY, sinX, cosX * cosY, 0,
+                    0, 0, 0, 1
+                ];
+                
+                // Configurar uniforms globais
+                this.gl.uniformMatrix4fv(this.uniforms.projectionMatrix, false, projectionMatrix);
+                this.gl.uniformMatrix4fv(this.uniforms.viewMatrix, false, viewMatrix);
+                this.gl.uniformMatrix4fv(this.uniforms.modelMatrix, false, rotationMatrix);
+                this.gl.uniform3f(this.uniforms.lightPosition, 2, 2, 2);
+                this.gl.uniform3f(this.uniforms.cameraPosition, 0, 0, 3);
+                this.gl.uniform1f(this.uniforms.time, this.time);
+                this.gl.uniform1f(this.uniforms.activationLevel, this.activationLevel);
+                this.gl.uniform1i(this.uniforms.crossSectionEnabled, this.crossSectionEnabled);
+                this.gl.uniform1f(this.uniforms.crossSectionY, 0);
+                this.gl.uniform1i(this.uniforms.molecularFlowEnabled, this.molecularFlowEnabled);
+                this.gl.uniform1i(this.uniforms.energyFlowEnabled, this.energyFlowEnabled);
+                
+                // Renderizar componentes baseado no modo de visualização
+                if (this.components.cellBody.visible) {
+                    this.renderComponent('cellBody', [0.8, 0.9, 1.0], [0, 0, 0]);
+                }
+                
+                if (this.components.nucleus.visible) {
+                    this.renderComponent('nucleus', [0.4, 0.2, 0.8], [0, 0, 0]);
+                }
+                
+                if (this.components.membrane.visible) {
+                    this.renderComponent('membrane', [0.2, 0.8, 0.9], [0, 0, 0]);
+                }
+                
+                if (this.components.tcrReceptors.visible) {
+                    this.renderComponent('tcrReceptors', [1.0, 0.6, 0.2], [0, 0, 0]);
+                }
+                
+                if (this.components.cd4Receptors.visible) {
+                    this.renderComponent('cd4Receptors', [0.9, 0.3, 0.6], [0, 0, 0]);
+                }
+                
+                if (this.components.mitochondria.visible) {
+                    this.renderComponent('mitochondria', [0.8, 0.4, 0.2], [0, 0, 0]);
+                }
+                
+                if (this.components.endoplasmicReticulum.visible) {
+                    this.renderComponent('endoplasmicReticulum', [0.6, 0.8, 0.4], [0, 0, 0]);
+                }
+                
+                if (this.components.golgiApparatus.visible) {
+                    this.renderComponent('golgiApparatus', [0.9, 0.7, 0.3], [0, 0, 0]);
+                }
+                
+                if (this.components.ribosomes.visible) {
+                    this.renderComponent('ribosomes', [0.5, 0.5, 0.9], [0, 0, 0]);
+                }
+                
+                if (this.components.cytokineVesicles.visible) {
+                    this.renderComponent('cytokineVesicles', [1.0, 0.8, 0.2], [0, 0, 0]);
+                }
+                
+                if (this.components.immunologicalSynapse.visible) {
+                    this.renderComponent('immunologicalSynapse', [1.0, 0.2, 0.4], [0, 0, 0]);
+                }
+                
+                // Renderizar fluxos se habilitados
+                if (this.molecularFlowEnabled) {
+                    this.renderMolecularFlow();
+                }
+                
+                if (this.energyFlowEnabled) {
+                    this.renderEnergyFlow();
+                }
+            }
+
+            renderComponent(componentName, color, offset) {
+                const buffer = this.buffers[componentName];
+                if (!buffer) return;
+                
+                // Configurar atributos
+                const positionLocation = this.gl.getAttribLocation(this.program, 'position');
+                const normalLocation = this.gl.getAttribLocation(this.program, 'normal');
+                
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer.position);
+                this.gl.enableVertexAttribArray(positionLocation);
+                this.gl.vertexAttribPointer(positionLocation, 3, this.gl.FLOAT, false, 0, 0);
+                
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer.normal);
+                this.gl.enableVertexAttribArray(normalLocation);
+                this.gl.vertexAttribPointer(normalLocation, 3, this.gl.FLOAT, false, 0, 0);
+                
+                // Configurar uniforms específicos do componente
+                this.gl.uniform3f(this.uniforms.componentColor, color[0], color[1], color[2]);
+                this.gl.uniform3f(this.uniforms.componentOffset, offset[0], offset[1], offset[2]);
+                this.gl.uniform1f(this.uniforms.opacity, this.opacity * this.components[componentName].opacity);
+                
+                // Renderizar
+                this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, buffer.indices);
+                this.gl.drawElements(this.gl.TRIANGLES, buffer.indexCount, this.gl.UNSIGNED_SHORT, 0);
+            }
+
+            renderMolecularFlow() {
+                // Renderizar partículas representando fluxo molecular
+                this.renderParticles([0.0, 0.3, 0.6], 100, 0.005);
+            }
+
+            renderEnergyFlow() {
+                // Renderizar ondas de energia
+                this.renderEnergyWaves([1.0, 1.0, 0.0], 50);
+            }
+
+            renderParticles(color, count, size) {
+                // Implementação simplificada de partículas
+                for (let i = 0; i < count; i++) {
+                    const angle = (i / count) * 2 * Math.PI + this.time * 0.5;
+                    const radius = 0.5 + Math.sin(this.time + i) * 0.3;
+                    const height = Math.sin(this.time * 2 + i) * 0.4;
+                    
+                    const x = radius * Math.cos(angle);
+                    const y = height;
+                    const z = radius * Math.sin(angle);
+                    
+                    // Renderizar ponto (implementação simplificada)
+                    this.gl.uniform3f(this.uniforms.componentColor, color[0], color[1], color[2]);
+                    this.gl.uniform3f(this.uniforms.componentOffset, x, y, z);
+                }
+            }
+
+            renderEnergyWaves(color, count) {
+                // Renderizar ondas de energia (implementação simplificada)
+                for (let i = 0; i < count; i++) {
+                    const wave = Math.sin(this.time * 3 + i * 0.2) * 0.5 + 0.5;
+                    const intensity = wave * this.activationLevel / 100;
+                    
+                    this.gl.uniform3f(this.uniforms.componentColor, 
+                        color[0] * intensity, 
+                        color[1] * intensity, 
+                        color[2] * intensity
+                    );
+                }
+            }
+
+            animate() {
+                this.time += 0.016; // ~60 FPS
+                
+                // Rotação automática suave
+                this.rotationZ += 0.005;
+                
+                // Atualizar displays de ativação se necessário
+                if (this.isActivating) {
+                    this.updateActivationDisplays();
+                }
+                
+                this.render();
+                requestAnimationFrame(() => this.animate());
+            }
+
+            start() {
+                console.log('Linfócito 3D Ultra-Detalhado iniciado');
+                this.animate();
+            }
+        }
+
+        // Inicializar quando a página carregar
+        let lymphocyte;
+        window.addEventListener('load', () => {
+            lymphocyte = new LymphocyteUltra();
+            lymphocyte.start();
+        });
+
+        // Função para cortes transversais
+        function toggleCrossSection() {
+            if (lymphocyte) {
+                lymphocyte.toggleCrossSection();
+            }
+        }
+
+        // Função para toggle dos controles no mobile
+        function toggleMobileControls() {
+            const controls = document.querySelector('.controls');
+            controls.classList.toggle('mobile-open');
+        }
+    </script>
+
+    <!-- Service Worker para funcionamento offline -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(registration => {
+                        console.log('✅ SW registrado:', registration);
+                    })
+                    .catch(error => {
+                        console.log('⚠️ SW não disponível:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="offline-ready" content="true">
+    <title>Neurônio 3D - Visualização Científica Avançada</title>
+    <script src="./libs/three.min.js"></script>
+    <script src="./libs/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            overflow: hidden;
+            color: white;
+        }
+
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 380px;
+            z-index: 1000;
+        }
+
+        #info-panel h1 {
+            color: #8b5cf6;
+            margin-bottom: 10px;
+            font-size: 1.6em;
+        }
+
+        #info-panel p {
+            margin-bottom: 8px;
+            line-height: 1.4;
+            font-size: 0.9em;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .control-group {
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-group h3 {
+            color: #8b5cf6;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        button {
+            background: linear-gradient(45deg, #8b5cf6, #a855f7);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            margin: 3px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
+        }
+
+        button.active {
+            background: linear-gradient(45deg, #059669, #10b981);
+        }
+
+        .slider-container {
+            margin: 10px 0;
+        }
+
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+            color: #8b5cf6;
+            font-size: 0.8em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .stats {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+        }
+
+        .stats h3 {
+            color: #8b5cf6;
+            margin-bottom: 10px;
+        }
+
+        .stat-item {
+            margin: 5px 0;
+            font-size: 0.8em;
+        }
+
+        .label {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .neural-activity {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+        }
+
+        .activity-bar {
+            width: 200px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .activity-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8b5cf6, #a855f7);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .research-insights {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 320px;
+            z-index: 1000;
+        }
+
+        .research-insights h3 {
+            color: #06b6d4;
+            margin-bottom: 10px;
+        }
+
+        .insight-item {
+            margin: 8px 0;
+            font-size: 0.8em;
+            padding: 8px;
+            background: rgba(6, 182, 212, 0.1);
+            border-radius: 5px;
+            border-left: 3px solid #06b6d4;
+        }
+
+        .synapse-visualization {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 500;
+        }
+
+        .neurotransmitter {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: #06b6d4;
+            border-radius: 50%;
+            animation: neurotransmitterFlow 2s linear infinite;
+        }
+
+        @keyframes neurotransmitterFlow {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.5); }
+            100% { opacity: 0; transform: scale(0.5); }
+        }
+
+        .action-potential {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #8b5cf6;
+            border-radius: 50%;
+            animation: actionPotentialPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes actionPotentialPulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(2); }
+        }
+
+        .membrane-potential {
+            position: absolute;
+            bottom: 120px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+        }
+
+        .potential-graph {
+            width: 200px;
+            height: 80px;
+            background: #1a1a2e;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .potential-line {
+            position: absolute;
+            bottom: 40px;
+            left: 0;
+            width: 2px;
+            height: 40px;
+            background: #06b6d4;
+            animation: potentialWave 3s linear infinite;
+        }
+
+        @keyframes potentialWave {
+            0% { left: 0; height: 40px; }
+            25% { left: 50px; height: 60px; }
+            50% { left: 100px; height: 20px; }
+            75% { left: 150px; height: 50px; }
+            100% { left: 200px; height: 40px; }
+        }
+
+        @media (max-width: 768px) {
+            #info-panel {
+                max-width: 280px;
+                padding: 15px;
+            }
+            
+            .controls {
+                bottom: 10px;
+                left: 10px;
+            }
+            
+            .stats {
+                top: 10px;
+                right: 10px;
+                padding: 10px;
+            }
+            
+            .neural-activity {
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            .research-insights {
+                display: none;
+            }
+            
+            .membrane-potential {
+                display: none;
+            }
+        }
+    </style>
+<link rel="stylesheet" href="./libs/fonts.css">
+</head>
+<body>
+    <!-- Indicador de modo offline -->
+    <div id="offline-indicator" style="
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: linear-gradient(45deg, #ff6b35, #f7931e);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        z-index: 10000;
+        display: none;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    ">
+        <span style="
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        "></span>
+        <span>Modo Offline</span>
+    </div>
+    
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+    
+    <script>
+        // Mostrar indicador offline
+        function updateOfflineIndicator() {
+            const indicator = document.getElementById('offline-indicator');
+            if (!navigator.onLine) {
+                indicator.style.display = 'flex';
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+        
+        window.addEventListener('online', updateOfflineIndicator);
+        window.addEventListener('offline', updateOfflineIndicator);
+        document.addEventListener('DOMContentLoaded', updateOfflineIndicator);
+    </script>
+    <div id="container">
+        <div id="info-panel">
+            <h1>🧠 Neurônio</h1>
+            <p><strong>Função:</strong> Transmissão de impulsos nervosos</p>
+            <p><strong>Localização:</strong> Sistema nervoso central e periférico</p>
+            <p><strong>Tamanho:</strong> 4-100 μm (corpo celular)</p>
+            <p><strong>Axônio:</strong> Até 1 metro de comprimento</p>
+            <p><strong>Velocidade:</strong> 0.5-120 m/s (condução)</p>
+            <p><strong>Sinapses:</strong> 1.000-10.000 por neurônio</p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <h3>Estruturas Neurais</h3>
+                <button onclick="toggleCellBody()">Corpo Celular</button>
+                <button onclick="toggleNucleus()">Núcleo</button>
+                <button onclick="toggleDendrites()">Dendritos</button>
+                <button onclick="toggleAxon()">Axônio</button>
+                <button onclick="toggleSynapses()">Sinapses</button>
+                <button onclick="toggleMitochondria()">Mitocôndrias</button>
+                <button onclick="toggleNissl()">Corpúsculos de Nissl</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>Atividade Neural</h3>
+                <button onclick="simulateActionPotential()">Potencial de Ação</button>
+                <button onclick="simulateSynapticTransmission()">Transmissão Sináptica</button>
+                <button onclick="simulateNeurotransmitterRelease()">Liberação de Neurotransmissores</button>
+                <button onclick="simulatePlasticity()">Plasticidade Sináptica</button>
+                <button onclick="simulateRegeneration()">Regeneração Axonal</button>
+                <button onclick="simulateMetabolism()">Metabolismo Neural</button>
+            </div>
+
+            <div class="slider-container">
+                <label for="excitability">Excitabilidade:</label>
+                <input type="range" id="excitability" min="0" max="100" value="70" onchange="updateExcitability(this.value)">
+            </div>
+
+            <div class="slider-container">
+                <label for="synapticStrength">Força Sináptica:</label>
+                <input type="range" id="synapticStrength" min="0" max="100" value="65" onchange="updateSynapticStrength(this.value)">
+            </div>
+
+            <div class="slider-container">
+                <label for="myelination">Mielinização:</label>
+                <input type="range" id="myelination" min="0" max="100" value="80" onchange="updateMyelination(this.value)">
+            </div>
+        </div>
+
+        <div class="stats">
+            <h3>📊 Parâmetros Neurais</h3>
+            <div class="stat-item">Excitabilidade: <span id="excitabilityValue">70%</span></div>
+            <div class="stat-item">Força Sináptica: <span id="synapticValue">65%</span></div>
+            <div class="stat-item">Mielinização: <span id="myelinValue">80%</span></div>
+            <div class="stat-item">Condução: <span id="conductionValue">Rápida</span></div>
+            <div class="stat-item">Estado: <span id="neuronState">Ativo</span></div>
+        </div>
+
+        <div class="neural-activity">
+            <h3>⚡ Atividade Neural</h3>
+            <div class="activity-bar">
+                <div class="activity-fill" id="activityFill" style="width: 70%"></div>
+            </div>
+            <div>Atividade: <span id="activityLevel">70%</span></div>
+            <div>Frequência: <span id="firingRate">45 Hz</span></div>
+            <div>Estado: <span id="neuralState">Ativo</span></div>
+        </div>
+
+        <div class="membrane-potential">
+            <h3>🔋 Potencial de Membrana</h3>
+            <div class="potential-graph">
+                <div class="potential-line"></div>
+            </div>
+            <div>Repouso: -70 mV</div>
+            <div>Limiar: -55 mV</div>
+            <div>Pico: +30 mV</div>
+        </div>
+
+        <div class="research-insights">
+            <h3>🧬 Descobertas Científicas Recentes</h3>
+            <div class="insight-item">
+                <strong>2023:</strong> Descoberta de novos tipos de neurônios no córtex cerebral humano
+            </div>
+            <div class="insight-item">
+                <strong>2023:</strong> Papel dos astrócitos na modulação da transmissão sináptica
+            </div>
+            <div class="insight-item">
+                <strong>2024:</strong> Mecanismos moleculares da plasticidade sináptica dependente de atividade
+            </div>
+            <div class="insight-item">
+                <strong>2024:</strong> Neurogênese adulta e regeneração neural em mamíferos
+            </div>
+            <div class="insight-item">
+                <strong>2024:</strong> Comunicação neural via exosomas e microRNAs
+            </div>
+            <div class="insight-item">
+                <strong>2024:</strong> Papel da microglia na poda sináptica e desenvolvimento neural
+            </div>
+            <div class="insight-item">
+                <strong>2024:</strong> Optogenética e controle preciso da atividade neural
+            </div>
+        </div>
+
+        <div class="synapse-visualization" id="synapseVisualization"></div>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let scene, camera, renderer, labelRenderer, controls;
+        let neuron = {};
+        let animationId;
+        let excitability = 70;
+        let synapticStrength = 65;
+        let myelination = 80;
+
+        // Estruturas do neurônio
+        let structures = [];
+
+        // Sistema de IA para análise neural
+        class NeuronAI {
+            constructor() {
+                this.analysisData = {
+                    excitability: 70,
+                    synapticStrength: 65,
+                    myelination: 80,
+                    functionalState: 'active'
+                };
+                this.researchInsights = [
+                    "Neurônios podem formar até 10.000 conexões sinápticas",
+                    "Velocidade de condução varia de 0.5 a 120 m/s",
+                    "Plasticidade sináptica é base do aprendizado e memória",
+                    "Neurogênese ocorre em regiões específicas do cérebro adulto",
+                    "Mielinização aumenta velocidade de condução em 100x",
+                    "Neurotransmissores modulam comunicação entre neurônios",
+                    "Potencial de ação segue princípio do tudo-ou-nada",
+                    "Sinapses podem ser excitatórias ou inibitórias",
+                    "Metabolismo neural consome 20% da energia corporal",
+                    "Regeneração axonal é limitada no sistema nervoso central"
+                ];
+            }
+
+            analyzeNeuron() {
+                const insights = this.researchInsights;
+                return insights[Math.floor(Math.random() * insights.length)];
+            }
+
+            updateAnalysis(excit, synap, myelin) {
+                this.analysisData.excitability = excit;
+                this.analysisData.synapticStrength = synap;
+                this.analysisData.myelination = myelin;
+                this.analysisData.functionalState = this.assessFunctionalState(excit, synap, myelin);
+            }
+
+            assessFunctionalState(excit, synap, myelin) {
+                const average = (excit + synap + myelin) / 3;
+                if (average >= 80) return 'hyperactive';
+                if (average >= 60) return 'active';
+                if (average >= 40) return 'hypoactive';
+                return 'inactive';
+            }
+        }
+
+        const neuronAI = new NeuronAI();
+
+        function init() {
+            // Configuração da cena
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a0a);
+
+            // Câmera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 10, 40);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            // Label Renderer
+            labelRenderer = new THREE.CSS2DRenderer();
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.domElement.style.position = 'absolute';
+            labelRenderer.domElement.style.top = '0px';
+            labelRenderer.domElement.style.pointerEvents = 'none';
+            document.getElementById('container').appendChild(labelRenderer.domElement);
+
+            // Controles
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Iluminação
+            setupLighting();
+
+            // Criar neurônio
+            createNeuron();
+
+            // Iniciar animação
+            animate();
+
+            // Eventos
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function setupLighting() {
+            // Luz ambiente
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+            scene.add(ambientLight);
+
+            // Luz direcional principal
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(30, 30, 30);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+
+            // Luzes pontuais coloridas
+            const pointLight1 = new THREE.PointLight(0x8b5cf6, 0.6, 80);
+            pointLight1.position.set(20, 20, 20);
+            scene.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0xa855f7, 0.4, 80);
+            pointLight2.position.set(-20, -20, 20);
+            scene.add(pointLight2);
+
+            const pointLight3 = new THREE.PointLight(0x06b6d4, 0.3, 80);
+            pointLight3.position.set(0, 30, -20);
+            scene.add(pointLight3);
+        }
+
+        function createNeuron() {
+            // Corpo celular
+            createCellBody();
+            
+            // Núcleo
+            createNucleus();
+            
+            // Dendritos
+            createDendrites();
+            
+            // Axônio
+            createAxon();
+            
+            // Sinapses
+            createSynapses();
+            
+            // Mitocôndrias
+            createMitochondria();
+            
+            // Corpúsculos de Nissl
+            createNisslBodies();
+        }
+
+        function createCellBody() {
+            // Corpo celular piramidal
+            const cellBodyGeometry = new THREE.SphereGeometry(3, 24, 24);
+            const cellBodyMaterial = new THREE.MeshPhongMaterial({
+                color: 0x8b5cf6,
+                transparent: true,
+                opacity: 0.8,
+                shininess: 100
+            });
+            
+            neuron.cellBody = new THREE.Mesh(cellBodyGeometry, cellBodyMaterial);
+            neuron.cellBody.position.set(0, 0, 0);
+            neuron.cellBody.userData.structureType = 'Corpo Celular';
+            scene.add(neuron.cellBody);
+            structures.push(neuron.cellBody);
+            addLabel(neuron.cellBody, 'Corpo Celular');
+        }
+
+        function createNucleus() {
+            // Núcleo central
+            const nucleusGeometry = new THREE.SphereGeometry(1.5, 20, 20);
+            const nucleusMaterial = new THREE.MeshPhongMaterial({
+                color: 0x6366f1,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            neuron.nucleus = new THREE.Mesh(nucleusGeometry, nucleusMaterial);
+            neuron.nucleus.position.set(0, 0, 0);
+            neuron.nucleus.userData.structureType = 'Núcleo';
+            scene.add(neuron.nucleus);
+            structures.push(neuron.nucleus);
+            addLabel(neuron.nucleus, 'Núcleo');
+
+            // Nucléolo
+            const nucleolusGeometry = new THREE.SphereGeometry(0.3, 12, 12);
+            const nucleolusMaterial = new THREE.MeshPhongMaterial({
+                color: 0x4f46e5,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const nucleolus = new THREE.Mesh(nucleolusGeometry, nucleolusMaterial);
+            nucleolus.position.set(0.3, 0.3, 0);
+            neuron.nucleus.add(nucleolus);
+        }
+
+        function createDendrites() {
+            neuron.dendrites = new THREE.Group();
+            
+            // Dendritos ramificados
+            for (let i = 0; i < 8; i++) {
+                const dendriteGroup = new THREE.Group();
+                
+                // Dendrito principal
+                const mainDendriteGeometry = new THREE.CylinderGeometry(0.1, 0.05, 8, 8);
+                const dendriteMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xa855f7,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                
+                const mainDendrite = new THREE.Mesh(mainDendriteGeometry, dendriteMaterial);
+                
+                const angle = (i / 8) * Math.PI * 2;
+                const elevation = (Math.random() - 0.5) * Math.PI * 0.5;
+                
+                mainDendrite.position.set(
+                    Math.cos(angle) * 3,
+                    Math.sin(elevation) * 2,
+                    Math.sin(angle) * 3
+                );
+                
+                mainDendrite.lookAt(
+                    Math.cos(angle) * 10,
+                    Math.sin(elevation) * 8,
+                    Math.sin(angle) * 10
+                );
+                
+                dendriteGroup.add(mainDendrite);
+                
+                // Ramificações dendríticas
+                for (let j = 0; j < 4; j++) {
+                    const branchGeometry = new THREE.CylinderGeometry(0.03, 0.01, 3, 6);
+                    const branch = new THREE.Mesh(branchGeometry, dendriteMaterial);
+                    
+                    branch.position.set(
+                        (Math.random() - 0.5) * 2,
+                        j * 1.5 + 2,
+                        (Math.random() - 0.5) * 2
+                    );
+                    
+                    branch.rotation.set(
+                        (Math.random() - 0.5) * Math.PI * 0.5,
+                        Math.random() * Math.PI * 2,
+                        (Math.random() - 0.5) * Math.PI * 0.5
+                    );
+                    
+                    mainDendrite.add(branch);
+                    
+                    // Espinhas dendríticas
+                    for (let k = 0; k < 6; k++) {
+                        const spineGeometry = new THREE.SphereGeometry(0.02, 6, 6);
+                        const spineMaterial = new THREE.MeshPhongMaterial({
+                            color: 0xc084fc
+                        });
+                        
+                        const spine = new THREE.Mesh(spineGeometry, spineMaterial);
+                        spine.position.set(
+                            (Math.random() - 0.5) * 0.3,
+                            k * 0.4,
+                            (Math.random() - 0.5) * 0.3
+                        );
+                        
+                        branch.add(spine);
+                    }
+                }
+                
+                neuron.dendrites.add(dendriteGroup);
+            }
+            
+            neuron.dendrites.userData.structureType = 'Dendritos';
+            scene.add(neuron.dendrites);
+            structures.push(neuron.dendrites);
+            addLabel(neuron.dendrites, 'Dendritos');
+        }
+
+        function createAxon() {
+            neuron.axon = new THREE.Group();
+            
+            // Axônio principal
+            const axonGeometry = new THREE.CylinderGeometry(0.2, 0.15, 25, 12);
+            const axonMaterial = new THREE.MeshPhongMaterial({
+                color: 0x06b6d4,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            const axon = new THREE.Mesh(axonGeometry, axonMaterial);
+            axon.position.set(0, -15, 0);
+            axon.rotation.x = Math.PI;
+            neuron.axon.add(axon);
+            
+            // Bainha de mielina
+            for (let i = 0; i < 10; i++) {
+                const myelinGeometry = new THREE.CylinderGeometry(0.25, 0.25, 2, 12);
+                const myelinMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xfbbf24,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const myelinSheath = new THREE.Mesh(myelinGeometry, myelinMaterial);
+                myelinSheath.position.set(0, -5 - i * 2.5, 0);
+                neuron.axon.add(myelinSheath);
+                
+                // Nódulos de Ranvier
+                if (i < 9) {
+                    const nodeGeometry = new THREE.CylinderGeometry(0.18, 0.18, 0.3, 12);
+                    const nodeMaterial = new THREE.MeshPhongMaterial({
+                        color: 0x10b981
+                    });
+                    
+                    const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
+                    node.position.set(0, -6.25 - i * 2.5, 0);
+                    neuron.axon.add(node);
+                }
+            }
+            
+            // Terminais axônicos
+            for (let i = 0; i < 6; i++) {
+                const terminalGeometry = new THREE.SphereGeometry(0.3, 12, 12);
+                const terminalMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x14b8a6,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                
+                const terminal = new THREE.Mesh(terminalGeometry, terminalMaterial);
+                const angle = (i / 6) * Math.PI * 2;
+                terminal.position.set(
+                    Math.cos(angle) * 2,
+                    -27,
+                    Math.sin(angle) * 2
+                );
+                
+                neuron.axon.add(terminal);
+            }
+            
+            neuron.axon.userData.structureType = 'Axônio';
+            scene.add(neuron.axon);
+            structures.push(neuron.axon);
+            addLabel(neuron.axon, 'Axônio');
+        }
+
+        function createSynapses() {
+            neuron.synapses = new THREE.Group();
+            
+            // Sinapses nos terminais dendríticos
+            for (let i = 0; i < 20; i++) {
+                const synapseGeometry = new THREE.SphereGeometry(0.08, 10, 10);
+                const synapseMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xf59e0b,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                
+                const synapse = new THREE.Mesh(synapseGeometry, synapseMaterial);
+                
+                const radius = 8 + Math.random() * 4;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                
+                synapse.position.set(
+                    radius * Math.sin(phi) * Math.cos(theta),
+                    radius * Math.sin(phi) * Math.sin(theta),
+                    radius * Math.cos(phi)
+                );
+                
+                neuron.synapses.add(synapse);
+                
+                // Vesículas sinápticas
+                for (let j = 0; j < 5; j++) {
+                    const vesicleGeometry = new THREE.SphereGeometry(0.02, 6, 6);
+                    const vesicleMaterial = new THREE.MeshPhongMaterial({
+                        color: 0xfbbf24
+                    });
+                    
+                    const vesicle = new THREE.Mesh(vesicleGeometry, vesicleMaterial);
+                    vesicle.position.set(
+                        (Math.random() - 0.5) * 0.1,
+                        (Math.random() - 0.5) * 0.1,
+                        (Math.random() - 0.5) * 0.1
+                    );
+                    
+                    synapse.add(vesicle);
+                }
+            }
+            
+            neuron.synapses.userData.structureType = 'Sinapses';
+            scene.add(neuron.synapses);
+            structures.push(neuron.synapses);
+            addLabel(neuron.synapses, 'Sinapses');
+        }
+
+        function createMitochondria() {
+            neuron.mitochondria = new THREE.Group();
+            
+            // Mitocôndrias distribuídas pelo neurônio
+            for (let i = 0; i < 15; i++) {
+                const mitochondriaGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.4, 8);
+                const mitochondriaMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x10b981,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const mitochondria = new THREE.Mesh(mitochondriaGeometry, mitochondriaMaterial);
+                
+                const radius = 1.5 + Math.random() * 2;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                
+                mitochondria.position.set(
+                    radius * Math.sin(phi) * Math.cos(theta),
+                    radius * Math.sin(phi) * Math.sin(theta),
+                    radius * Math.cos(phi)
+                );
+                
+                mitochondria.rotation.set(
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI
+                );
+                
+                neuron.mitochondria.add(mitochondria);
+            }
+            
+            neuron.mitochondria.userData.structureType = 'Mitocôndrias';
+            scene.add(neuron.mitochondria);
+            structures.push(neuron.mitochondria);
+            addLabel(neuron.mitochondria, 'Mitocôndrias');
+        }
+
+        function createNisslBodies() {
+            neuron.nissl = new THREE.Group();
+            
+            // Corpúsculos de Nissl (RE rugoso)
+            for (let i = 0; i < 8; i++) {
+                const nisslGeometry = new THREE.BoxGeometry(0.3, 0.2, 0.4);
+                const nisslMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x3b82f6,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const nissl = new THREE.Mesh(nisslGeometry, nisslMaterial);
+                
+                const radius = 1.8 + Math.random() * 0.8;
+                const theta = (i / 8) * Math.PI * 2;
+                
+                nissl.position.set(
+                    radius * Math.cos(theta),
+                    (Math.random() - 0.5) * 2,
+                    radius * Math.sin(theta)
+                );
+                
+                nissl.rotation.set(
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI
+                );
+                
+                neuron.nissl.add(nissl);
+            }
+            
+            neuron.nissl.userData.structureType = 'Corpúsculos de Nissl';
+            scene.add(neuron.nissl);
+            structures.push(neuron.nissl);
+            addLabel(neuron.nissl, 'Corpúsculos de Nissl');
+        }
+
+        function addLabel(object, text) {
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'label';
+            labelDiv.textContent = text;
+            const label = new THREE.CSS2DObject(labelDiv);
+            label.position.set(0, 0, 0);
+            object.add(label);
+        }
+
+        // Funções de controle
+        function toggleCellBody() {
+            neuron.cellBody.visible = !neuron.cellBody.visible;
+        }
+
+        function toggleNucleus() {
+            neuron.nucleus.visible = !neuron.nucleus.visible;
+        }
+
+        function toggleDendrites() {
+            neuron.dendrites.visible = !neuron.dendrites.visible;
+        }
+
+        function toggleAxon() {
+            neuron.axon.visible = !neuron.axon.visible;
+        }
+
+        function toggleSynapses() {
+            neuron.synapses.visible = !neuron.synapses.visible;
+        }
+
+        function toggleMitochondria() {
+            neuron.mitochondria.visible = !neuron.mitochondria.visible;
+        }
+
+        function toggleNissl() {
+            neuron.nissl.visible = !neuron.nissl.visible;
+        }
+
+        // Simulações
+        function simulateActionPotential() {
+            console.log("Simulando potencial de ação...");
+            
+            // Propagação ao longo do axônio
+            neuron.axon.children.forEach((segment, index) => {
+                setTimeout(() => {
+                    segment.material.emissive.setHex(0x444444);
+                    segment.scale.setScalar(1.2);
+                    
+                    setTimeout(() => {
+                        segment.material.emissive.setHex(0x000000);
+                        segment.scale.setScalar(1);
+                    }, 200);
+                }, index * 50);
+            });
+        }
+
+        function simulateSynapticTransmission() {
+            console.log("Simulando transmissão sináptica...");
+            
+            // Ativação das sinapses
+            neuron.synapses.children.forEach((synapse, index) => {
+                setTimeout(() => {
+                    synapse.material.emissive.setHex(0x666666);
+                    synapse.scale.setScalar(1.5);
+                    
+                    // Ativação das vesículas
+                    synapse.children.forEach(vesicle => {
+                        vesicle.material.emissive.setHex(0x444444);
+                    });
+                    
+                    setTimeout(() => {
+                        synapse.material.emissive.setHex(0x000000);
+                        synapse.scale.setScalar(1);
+                        synapse.children.forEach(vesicle => {
+                            vesicle.material.emissive.setHex(0x000000);
+                        });
+                    }, 400);
+                }, index * 30);
+            });
+        }
+
+        function simulateNeurotransmitterRelease() {
+            console.log("Simulando liberação de neurotransmissores...");
+            
+            // Criar partículas de neurotransmissores
+            for (let i = 0; i < 30; i++) {
+                const ntGeometry = new THREE.SphereGeometry(0.03, 6, 6);
+                const ntMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x06b6d4,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                
+                const neurotransmitter = new THREE.Mesh(ntGeometry, ntMaterial);
+                
+                // Posição inicial nas sinapses
+                const synapse = neuron.synapses.children[Math.floor(Math.random() * neuron.synapses.children.length)];
+                neurotransmitter.position.copy(synapse.position);
+                scene.add(neurotransmitter);
+                
+                // Animação de difusão
+                const direction = new THREE.Vector3(
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2
+                ).normalize();
+                
+                const animate = () => {
+                    neurotransmitter.position.add(direction.clone().multiplyScalar(0.1));
+                    neurotransmitter.material.opacity -= 0.02;
+                    
+                    if (neurotransmitter.material.opacity > 0) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        scene.remove(neurotransmitter);
+                    }
+                };
+                
+                setTimeout(animate, i * 50);
+            }
+        }
+
+        function simulatePlasticity() {
+            console.log("Simulando plasticidade sináptica...");
+            
+            // Fortalecimento das sinapses
+            neuron.synapses.children.forEach((synapse, index) => {
+                setTimeout(() => {
+                    synapse.scale.setScalar(1.3);
+                    synapse.material.color.setHex(0xfbbf24);
+                    
+                    setTimeout(() => {
+                        synapse.scale.setScalar(1);
+                        synapse.material.color.setHex(0xf59e0b);
+                    }, 1000);
+                }, index * 100);
+            });
+        }
+
+        function simulateRegeneration() {
+            console.log("Simulando regeneração axonal...");
+            
+            // Crescimento axonal
+            neuron.axon.children.forEach((segment, index) => {
+                setTimeout(() => {
+                    segment.material.emissive.setHex(0x333333);
+                    segment.scale.setScalar(1.1);
+                    
+                    setTimeout(() => {
+                        segment.material.emissive.setHex(0x000000);
+                        segment.scale.setScalar(1);
+                    }, 800);
+                }, index * 100);
+            });
+        }
+
+        function simulateMetabolism() {
+            console.log("Simulando metabolismo neural...");
+            
+            // Ativação das mitocôndrias
+            neuron.mitochondria.children.forEach((mito, index) => {
+                setTimeout(() => {
+                    mito.material.emissive.setHex(0x333333);
+                    mito.scale.setScalar(1.4);
+                    
+                    setTimeout(() => {
+                        mito.material.emissive.setHex(0x000000);
+                        mito.scale.setScalar(1);
+                    }, 600);
+                }, index * 80);
+            });
+        }
+
+        function updateExcitability(value) {
+            excitability = value;
+            neuronAI.updateAnalysis(value, synapticStrength, myelination);
+            
+            document.getElementById('excitabilityValue').textContent = value + '%';
+            
+            // Atualizar atividade neural
+            document.getElementById('activityLevel').textContent = value + '%';
+            document.getElementById('activityFill').style.width = value + '%';
+            
+            // Atualizar frequência de disparo
+            const firingRate = Math.floor(value * 0.8);
+            document.getElementById('firingRate').textContent = firingRate + ' Hz';
+        }
+
+        function updateSynapticStrength(value) {
+            synapticStrength = value;
+            neuronAI.updateAnalysis(excitability, value, myelination);
+            
+            document.getElementById('synapticValue').textContent = value + '%';
+            
+            // Atualizar aparência das sinapses
+            neuron.synapses.children.forEach(synapse => {
+                const intensity = value / 100;
+                synapse.material.opacity = 0.6 + intensity * 0.4;
+                synapse.scale.setScalar(0.8 + intensity * 0.4);
+            });
+        }
+
+        function updateMyelination(value) {
+            myelination = value;
+            neuronAI.updateAnalysis(excitability, synapticStrength, value);
+            
+            document.getElementById('myelinValue').textContent = value + '%';
+            
+            // Atualizar velocidade de condução
+            const conductionSpeed = value >= 70 ? 'Rápida' : value >= 40 ? 'Moderada' : 'Lenta';
+            document.getElementById('conductionValue').textContent = conductionSpeed;
+            
+            // Atualizar estado neural
+            const functionalState = neuronAI.analysisData.functionalState;
+            const stateNames = {
+                'hyperactive': 'Hiperativo',
+                'active': 'Ativo',
+                'hypoactive': 'Hipoativo',
+                'inactive': 'Inativo'
+            };
+            document.getElementById('neuronState').textContent = stateNames[functionalState];
+            
+            // Atualizar estado geral
+            const average = (excitability + synapticStrength + value) / 3;
+            const neuralState = average >= 70 ? 'Ativo' : average >= 50 ? 'Moderado' : 'Baixo';
+            document.getElementById('neuralState').textContent = neuralState;
+        }
+
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+            
+            const time = Date.now() * 0.001;
+            
+            // Rotação suave do neurônio
+            if (neuron.cellBody) {
+                neuron.cellBody.rotation.y += 0.001;
+            }
+            
+            // Pulsação do núcleo
+            if (neuron.nucleus) {
+                neuron.nucleus.scale.setScalar(1 + Math.sin(time * 3) * 0.05);
+            }
+            
+            // Movimento dos dendritos
+            if (neuron.dendrites) {
+                neuron.dendrites.children.forEach((dendrite, index) => {
+                    dendrite.rotation.z += Math.sin(time + index) * 0.001;
+                });
+            }
+            
+            // Atividade sináptica
+            if (neuron.synapses) {
+                neuron.synapses.children.forEach((synapse, index) => {
+                    if (synapse.material && synapse.material.emissive) {
+                        synapse.material.emissive.setRGB(
+                            Math.sin(time * 4 + index) * 0.1,
+                            Math.sin(time * 4 + index) * 0.05,
+                            0
+                        );
+                    }
+                });
+            }
+            
+            // Atividade das mitocôndrias
+            if (neuron.mitochondria) {
+                neuron.mitochondria.children.forEach((mito, index) => {
+                    mito.rotation.x += 0.01;
+                    mito.rotation.y += 0.005;
+                    if (mito.material && mito.material.emissive) {
+                        mito.material.emissive.setRGB(
+                            0,
+                            Math.sin(time * 2 + index) * 0.1,
+                            0
+                        );
+                    }
+                });
+            }
+            
+            // Atividade dos corpúsculos de Nissl
+            if (neuron.nissl) {
+                neuron.nissl.children.forEach((nissl, index) => {
+                    if (nissl.material && nissl.material.emissive) {
+                        nissl.material.emissive.setRGB(
+                            0,
+                            0,
+                            Math.sin(time * 2.5 + index) * 0.08
+                        );
+                    }
+                });
+            }
+            
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Inicializar quando a página carregar
+        window.addEventListener('load', init);
+    </script>
+
+    <!-- Service Worker para funcionamento offline -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(registration => {
+                        console.log('✅ SW registrado:', registration);
+                    })
+                    .catch(error => {
+                        console.log('⚠️ SW não disponível:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

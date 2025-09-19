@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="offline-ready" content="true">
+    <title>Modelo 3D Interativo - Ovócito Secundário em Metáfase 2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            overflow: hidden;
+            color: white;
+        }
+
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 300px;
+            z-index: 1000;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 1000;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .control-group button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 5px;
+            font-size: 11px;
+        }
+
+        .control-group button:hover {
+            background: #45a049;
+        }
+
+        .control-group button.active {
+            background: #ff6b6b;
+        }
+
+        #info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 250px;
+            z-index: 1000;
+            display: none;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 2000;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .legend {
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        h3 {
+            margin-bottom: 15px;
+            color: #4CAF50;
+            font-size: 14px;
+        }
+
+        .toggle-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+            margin-left: 5px;
+        }
+
+        .toggle-btn:hover {
+            background: #1976D2;
+        }
+    </style>
+<link rel="stylesheet" href="./libs/fonts.css">
+</head>
+<body>
+    <!-- Indicador de modo offline -->
+    <div id="offline-indicator" style="
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: linear-gradient(45deg, #ff6b35, #f7931e);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        z-index: 10000;
+        display: none;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    ">
+        <span style="
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        "></span>
+        <span>Modo Offline</span>
+    </div>
+    
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+    
+    <script>
+        // Mostrar indicador offline
+        function updateOfflineIndicator() {
+            const indicator = document.getElementById('offline-indicator');
+            if (!navigator.onLine) {
+                indicator.style.display = 'flex';
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+        
+        window.addEventListener('online', updateOfflineIndicator);
+        window.addEventListener('offline', updateOfflineIndicator);
+        document.addEventListener('DOMContentLoaded', updateOfflineIndicator);
+    </script>
+    <div id="container">
+        <div id="loading">
+            <div class="spinner"></div>
+            <p>Carregando modelo 3D do ovócito...</p>
+        </div>
+
+        <div id="canvas-container"></div>
+
+        <div id="ui-panel">
+            <h3>Ovócito Secundário - Metáfase 2</h3>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ff6b6b;"></div>
+                    <span>Zona Pelúcida</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #4ecdc4;"></div>
+                    <span>Membrana Celular</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #45b7d1;"></div>
+                    <span>Citoplasma</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #9b59b6;"></div>
+                    <span>Núcleo</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e74c3c;"></div>
+                    <span>Cromossomos</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f39c12;"></div>
+                    <span>Mitocôndrias</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #2ecc71;"></div>
+                    <span>Retículo Endoplasmático</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f1c40f;"></div>
+                    <span>Grânulos Corticais</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="controls">
+            <div class="control-group">
+                <label>Zoom</label>
+                <input type="range" id="zoom-slider" min="0.5" max="3" step="0.1" value="1">
+            </div>
+            <div class="control-group">
+                <label>Rotação Automática</label>
+                <button id="auto-rotate-btn">Ativar</button>
+            </div>
+            <div class="control-group">
+                <label>Componentes Visíveis</label>
+                <button id="toggle-zona" class="toggle-btn active">Zona Pelúcida</button>
+                <button id="toggle-nucleus" class="toggle-btn active">Núcleo</button>
+                <button id="toggle-chromosomes" class="toggle-btn active">Cromossomos</button>
+                <button id="toggle-mitochondria" class="toggle-btn active">Mitocôndrias</button>
+                <button id="toggle-er" class="toggle-btn active">Ret. Endoplasmático</button>
+                <button id="toggle-granules" class="toggle-btn active">Grânulos</button>
+            </div>
+            <div class="control-group">
+                <label>Visualização</label>
+                <button id="reset-view">Resetar Vista</button>
+                <button id="cross-section">Corte Transversal</button>
+            </div>
+        </div>
+
+        <div id="info-panel">
+            <h3 id="info-title">Informações</h3>
+            <p id="info-content">Clique em um componente para ver detalhes.</p>
+        </div>
+    </div>
+
+    <script src="./libs/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/controls/OrbitControls.js"></script>
+    <script>
+        // Global variables
+        let scene, camera, renderer, controls;
+        let oocyteGroup, zonaGroup, nucleusGroup, chromosomeGroup, mitochondriaGroup, erGroup, granuleGroup;
+        let autoRotate = false;
+        let crossSectionMode = false;
+        let raycaster, mouse;
+
+        // Component information
+        const componentInfo = {
+            zona: {
+                title: "Zona Pelúcida",
+                content: "Camada glicoproteica que envolve o ovócito. Contém receptores ZP2 para ligação espermática e previne poliespermia após fertilização."
+            },
+            nucleus: {
+                title: "Núcleo",
+                content: "Contém o material genético do ovócito. Durante a metáfase 2, os cromossomos estão alinhados na placa metafásica."
+            },
+            chromosomes: {
+                title: "Cromossomos",
+                content: "23 cromossomos alinhados na placa metafásica, aguardando a fertilização para completar a meiose 2."
+            },
+            mitochondria: {
+                title: "Mitocôndrias",
+                content: "Organelas responsáveis pela produção de ATP (energia). Essenciais para os processos metabólicos do ovócito."
+            },
+            er: {
+                title: "Retículo Endoplasmático",
+                content: "Sistema de membranas responsável pela síntese de proteínas e lipídios, e armazenamento de cálcio."
+            },
+            granules: {
+                title: "Grânulos Corticais",
+                content: "Vesículas contendo enzimas que são liberadas após fertilização para modificar a zona pelúcida e prevenir poliespermia."
+            }
+        };
+
+        // Initialize the 3D scene
+        function init() {
+            try {
+                console.log('Initializing 3D scene...');
+                
+                // Check if THREE is loaded
+                if (typeof THREE === 'undefined') {
+                    throw new Error('Three.js library not loaded');
+                }
+                
+                // Create scene
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x1a1a2e);
+                console.log('Scene created');
+
+                // Create camera
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(0, 0, 5);
+                console.log('Camera created');
+
+                // Create renderer
+                renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                document.getElementById('canvas-container').appendChild(renderer.domElement);
+                console.log('Renderer created and added to DOM');
+
+                // Create controls
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.enableZoom = true;
+                controls.enablePan = true;
+                console.log('Controls created');
+
+                // Setup lighting
+                setupLighting();
+                console.log('Lighting setup complete');
+
+                // Create oocyte components
+                createOocyte();
+                console.log('Oocyte components created');
+
+                // Setup raycaster for interaction
+                raycaster = new THREE.Raycaster();
+                mouse = new THREE.Vector2();
+
+                // Setup event listeners
+                setupEventListeners();
+                console.log('Event listeners setup');
+
+                // Hide loading screen
+                document.getElementById('loading').style.display = 'none';
+                console.log('Loading screen hidden');
+
+                // Start animation loop
+                animate();
+                console.log('Animation started');
+                
+            } catch (error) {
+                console.error('Error initializing 3D scene:', error);
+                document.getElementById('loading').innerHTML = '<div class="spinner"></div><p>Erro ao carregar o modelo 3D: ' + error.message + '</p>';
+            }
+        }
+
+        function setupLighting() {
+            // Ambient light
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            // Main directional light
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+
+            // Fill lights
+            const fillLight1 = new THREE.DirectionalLight(0x4ecdc4, 0.3);
+            fillLight1.position.set(-5, 0, 2);
+            scene.add(fillLight1);
+
+            const fillLight2 = new THREE.DirectionalLight(0xff6b6b, 0.2);
+            fillLight2.position.set(0, -5, 2);
+            scene.add(fillLight2);
+
+            // Point light for inner glow
+            const pointLight = new THREE.PointLight(0x45b7d1, 0.5, 10);
+            pointLight.position.set(0, 0, 0);
+            scene.add(pointLight);
+        }
+
+        function createOocyte() {
+            // Main oocyte group
+            oocyteGroup = new THREE.Group();
+            scene.add(oocyteGroup);
+
+            // Create zona pellucida (outer layer)
+            createZonaPellucida();
+
+            // Create main cell body
+            createCellBody();
+
+            // Create nucleus
+            createNucleus();
+
+            // Create chromosomes
+            createChromosomes();
+
+            // Create organelles
+            createMitochondria();
+            createEndoplasmicReticulum();
+            createCorticalGranules();
+
+            // Create microvilli
+            createMicrovilli();
+        }
+
+        function createZonaPellucida() {
+            zonaGroup = new THREE.Group();
+            zonaGroup.name = 'zona';
+
+            // Outer zona pellucida
+            const zonaGeometry = new THREE.SphereGeometry(2.2, 64, 64);
+            const zonaMaterial = new THREE.MeshPhongMaterial({
+                color: 0xff6b6b,
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide
+            });
+            const zona = new THREE.Mesh(zonaGeometry, zonaMaterial);
+            zona.name = 'zona';
+            zonaGroup.add(zona);
+
+            // Add texture to zona pellucida
+            const zonaInnerGeometry = new THREE.SphereGeometry(2.1, 32, 32);
+            const zonaInnerMaterial = new THREE.MeshPhongMaterial({
+                color: 0xff8a8a,
+                transparent: true,
+                opacity: 0.15,
+                wireframe: true
+            });
+            const zonaInner = new THREE.Mesh(zonaInnerGeometry, zonaInnerMaterial);
+            zonaGroup.add(zonaInner);
+
+            oocyteGroup.add(zonaGroup);
+        }
+
+        function createCellBody() {
+            // Main cell membrane
+            const cellGeometry = new THREE.SphereGeometry(2.0, 64, 64);
+            const cellMaterial = new THREE.MeshPhongMaterial({
+                color: 0x4ecdc4,
+                transparent: true,
+                opacity: 0.4,
+                side: THREE.DoubleSide
+            });
+            const cell = new THREE.Mesh(cellGeometry, cellMaterial);
+            cell.name = 'cell';
+            oocyteGroup.add(cell);
+
+            // Cytoplasm
+            const cytoplasmGeometry = new THREE.SphereGeometry(1.95, 32, 32);
+            const cytoplasmMaterial = new THREE.MeshPhongMaterial({
+                color: 0x45b7d1,
+                transparent: true,
+                opacity: 0.2
+            });
+            const cytoplasm = new THREE.Mesh(cytoplasmGeometry, cytoplasmMaterial);
+            cytoplasm.name = 'cytoplasm';
+            oocyteGroup.add(cytoplasm);
+        }
+
+        function createNucleus() {
+            nucleusGroup = new THREE.Group();
+            nucleusGroup.name = 'nucleus';
+
+            // Nuclear envelope
+            const nucleusGeometry = new THREE.SphereGeometry(0.8, 32, 32);
+            const nucleusMaterial = new THREE.MeshPhongMaterial({
+                color: 0x9b59b6,
+                transparent: true,
+                opacity: 0.6
+            });
+            const nucleus = new THREE.Mesh(nucleusGeometry, nucleusMaterial);
+            nucleus.name = 'nucleus';
+            nucleusGroup.add(nucleus);
+
+            // Nuclear pores
+            for (let i = 0; i < 20; i++) {
+                const poreGeometry = new THREE.SphereGeometry(0.02, 8, 8);
+                const poreMaterial = new THREE.MeshPhongMaterial({ color: 0x8e44ad });
+                const pore = new THREE.Mesh(poreGeometry, poreMaterial);
+                
+                const phi = Math.acos(-1 + (2 * i) / 20);
+                const theta = Math.sqrt(20 * Math.PI) * phi;
+                
+                pore.position.x = 0.8 * Math.cos(theta) * Math.sin(phi);
+                pore.position.y = 0.8 * Math.sin(theta) * Math.sin(phi);
+                pore.position.z = 0.8 * Math.cos(phi);
+                
+                nucleusGroup.add(pore);
+            }
+
+            oocyteGroup.add(nucleusGroup);
+        }
+
+        function createChromosomes() {
+            chromosomeGroup = new THREE.Group();
+            chromosomeGroup.name = 'chromosomes';
+
+            // Create 23 chromosomes arranged in metaphase plate
+            for (let i = 0; i < 23; i++) {
+                const chromosomeGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8);
+                const chromosomeMaterial = new THREE.MeshPhongMaterial({ color: 0xe74c3c });
+                const chromosome = new THREE.Mesh(chromosomeGeometry, chromosomeMaterial);
+                
+                // Arrange chromosomes in a circular pattern (metaphase plate)
+                const angle = (i / 23) * Math.PI * 2;
+                const radius = 0.3;
+                chromosome.position.x = Math.cos(angle) * radius;
+                chromosome.position.z = Math.sin(angle) * radius;
+                chromosome.position.y = 0;
+                
+                chromosome.rotation.z = Math.random() * Math.PI;
+                chromosome.name = 'chromosomes';
+                
+                chromosomeGroup.add(chromosome);
+            }
+
+            // Add spindle fibers
+            for (let i = 0; i < 23; i++) {
+                const fiberGeometry = new THREE.CylinderGeometry(0.005, 0.005, 0.6, 4);
+                const fiberMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0x95a5a6,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                const fiber = new THREE.Mesh(fiberGeometry, fiberMaterial);
+                
+                const angle = (i / 23) * Math.PI * 2;
+                const radius = 0.3;
+                fiber.position.x = Math.cos(angle) * radius;
+                fiber.position.z = Math.sin(angle) * radius;
+                fiber.position.y = 0;
+                
+                chromosomeGroup.add(fiber);
+            }
+
+            oocyteGroup.add(chromosomeGroup);
+        }
+
+        function createMitochondria() {
+            mitochondriaGroup = new THREE.Group();
+            mitochondriaGroup.name = 'mitochondria';
+
+            // Create multiple mitochondria scattered throughout cytoplasm
+            for (let i = 0; i < 150; i++) {
+                const mitoGeometry = new THREE.CapsuleGeometry(0.03, 0.1, 4, 8);
+                const mitoMaterial = new THREE.MeshPhongMaterial({ color: 0xf39c12 });
+                const mitochondrion = new THREE.Mesh(mitoGeometry, mitoMaterial);
+                
+                // Random position within cell but outside nucleus
+                let position;
+                do {
+                    position = new THREE.Vector3(
+                        (Math.random() - 0.5) * 3.5,
+                        (Math.random() - 0.5) * 3.5,
+                        (Math.random() - 0.5) * 3.5
+                    );
+                } while (position.length() < 1.0 || position.length() > 1.8);
+                
+                mitochondrion.position.copy(position);
+                mitochondrion.rotation.x = Math.random() * Math.PI;
+                mitochondrion.rotation.y = Math.random() * Math.PI;
+                mitochondrion.rotation.z = Math.random() * Math.PI;
+                mitochondrion.name = 'mitochondria';
+                
+                mitochondriaGroup.add(mitochondrion);
+            }
+
+            oocyteGroup.add(mitochondriaGroup);
+        }
+
+        function createEndoplasmicReticulum() {
+            erGroup = new THREE.Group();
+            erGroup.name = 'er';
+
+            // Create ER network
+            for (let i = 0; i < 50; i++) {
+                const erGeometry = new THREE.TorusGeometry(0.1, 0.02, 8, 16);
+                const erMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0x2ecc71,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const er = new THREE.Mesh(erGeometry, erMaterial);
+                
+                // Random position within cell
+                let position;
+                do {
+                    position = new THREE.Vector3(
+                        (Math.random() - 0.5) * 3.0,
+                        (Math.random() - 0.5) * 3.0,
+                        (Math.random() - 0.5) * 3.0
+                    );
+                } while (position.length() < 1.0 || position.length() > 1.7);
+                
+                er.position.copy(position);
+                er.rotation.x = Math.random() * Math.PI;
+                er.rotation.y = Math.random() * Math.PI;
+                er.rotation.z = Math.random() * Math.PI;
+                er.name = 'er';
+                
+                erGroup.add(er);
+            }
+
+            oocyteGroup.add(erGroup);
+        }
+
+        function createCorticalGranules() {
+            granuleGroup = new THREE.Group();
+            granuleGroup.name = 'granules';
+
+            // Create cortical granules near cell membrane
+            for (let i = 0; i < 80; i++) {
+                const granuleGeometry = new THREE.SphereGeometry(0.04, 8, 8);
+                const granuleMaterial = new THREE.MeshPhongMaterial({ color: 0xf1c40f });
+                const granule = new THREE.Mesh(granuleGeometry, granuleMaterial);
+                
+                // Position near cell membrane
+                const direction = new THREE.Vector3(
+                    Math.random() - 0.5,
+                    Math.random() - 0.5,
+                    Math.random() - 0.5
+                ).normalize();
+                
+                granule.position.copy(direction.multiplyScalar(1.6 + Math.random() * 0.2));
+                granule.name = 'granules';
+                
+                granuleGroup.add(granule);
+            }
+
+            oocyteGroup.add(granuleGroup);
+        }
+
+        function createMicrovilli() {
+            // Create microvilli on cell surface
+            for (let i = 0; i < 200; i++) {
+                const microvilliGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.1, 4);
+                const microvilliMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0x3498db,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                const microvillus = new THREE.Mesh(microvilliGeometry, microvilliMaterial);
+                
+                // Position on cell surface
+                const direction = new THREE.Vector3(
+                    Math.random() - 0.5,
+                    Math.random() - 0.5,
+                    Math.random() - 0.5
+                ).normalize();
+                
+                microvillus.position.copy(direction.multiplyScalar(2.05));
+                microvillus.lookAt(direction.multiplyScalar(3));
+                
+                oocyteGroup.add(microvillus);
+            }
+        }
+
+        function setupEventListeners() {
+            // Window resize
+            window.addEventListener('resize', onWindowResize, false);
+
+            // Mouse interaction
+            renderer.domElement.addEventListener('click', onMouseClick, false);
+            renderer.domElement.addEventListener('mousemove', onMouseMove, false);
+
+            // UI controls
+            document.getElementById('zoom-slider').addEventListener('input', function(e) {
+                const zoom = parseFloat(e.target.value);
+                camera.position.multiplyScalar(zoom / camera.position.length() * 5);
+            });
+
+            document.getElementById('auto-rotate-btn').addEventListener('click', function() {
+                autoRotate = !autoRotate;
+                this.textContent = autoRotate ? 'Desativar' : 'Ativar';
+                this.style.background = autoRotate ? '#e74c3c' : '#4CAF50';
+            });
+
+            document.getElementById('reset-view').addEventListener('click', function() {
+                camera.position.set(0, 0, 5);
+                controls.reset();
+            });
+
+            document.getElementById('cross-section').addEventListener('click', function() {
+                crossSectionMode = !crossSectionMode;
+                this.textContent = crossSectionMode ? 'Vista Completa' : 'Corte Transversal';
+                this.style.background = crossSectionMode ? '#e74c3c' : '#4CAF50';
+                
+                if (crossSectionMode) {
+                    // Create clipping plane for cross-section
+                    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+                    renderer.clippingPlanes = [plane];
+                    renderer.localClippingEnabled = true;
+                } else {
+                    renderer.clippingPlanes = [];
+                    renderer.localClippingEnabled = false;
+                }
+            });
+
+            // Component visibility toggles
+            const toggleButtons = {
+                'toggle-zona': zonaGroup,
+                'toggle-nucleus': nucleusGroup,
+                'toggle-chromosomes': chromosomeGroup,
+                'toggle-mitochondria': mitochondriaGroup,
+                'toggle-er': erGroup,
+                'toggle-granules': granuleGroup
+            };
+
+            Object.keys(toggleButtons).forEach(buttonId => {
+                document.getElementById(buttonId).addEventListener('click', function() {
+                    const group = toggleButtons[buttonId];
+                    group.visible = !group.visible;
+                    this.classList.toggle('active');
+                    this.style.background = group.visible ? '#2196F3' : '#666';
+                });
+            });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onMouseClick(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+
+            if (intersects.length > 0) {
+                const object = intersects[0].object;
+                showInfo(object.name);
+            }
+        }
+
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+
+            if (intersects.length > 0) {
+                document.body.style.cursor = 'pointer';
+            } else {
+                document.body.style.cursor = 'default';
+            }
+        }
+
+        function showInfo(componentName) {
+            const info = componentInfo[componentName];
+            if (info) {
+                document.getElementById('info-title').textContent = info.title;
+                document.getElementById('info-content').textContent = info.content;
+                document.getElementById('info-panel').style.display = 'block';
+                
+                setTimeout(() => {
+                    document.getElementById('info-panel').style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Auto rotation
+            if (autoRotate) {
+                oocyteGroup.rotation.y += 0.005;
+            }
+
+            // Update controls
+            controls.update();
+
+            // Render scene
+            renderer.render(scene, camera);
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', init);
+        
+        // Fallback initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, checking if Three.js is available...');
+            setTimeout(() => {
+                if (typeof THREE !== 'undefined' && !scene) {
+                    console.log('Fallback initialization triggered');
+                    init();
+                }
+            }, 1000);
+        });
+    </script>
+
+    <!-- Service Worker para funcionamento offline -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(registration => {
+                        console.log('✅ SW registrado:', registration);
+                    })
+                    .catch(error => {
+                        console.log('⚠️ SW não disponível:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
